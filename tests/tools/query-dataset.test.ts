@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { handleQueryDataset } from "../../src/tools/query-dataset.js";
 import type { SocrataClient } from "../../src/lib/socrata-client.js";
+import { validate } from "../../src/lib/validator.js";
 
 function makeMockClient(overrides: Partial<SocrataClient> = {}): SocrataClient {
   return {
@@ -72,5 +73,19 @@ describe("query_dataset handler", () => {
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("BAD_QUERY");
+  });
+});
+
+describe("query_dataset diagnostics", () => {
+  it("validator produces warnings for large limits", () => {
+    const result = validate({ limit: "50000" });
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({ code: "LARGE_LIMIT", severity: "warning" }),
+    ]);
+  });
+
+  it("validator produces diagnostics for bad where clause", () => {
+    const result = validate({ where: "name LIEK '%test%'" });
+    expect(result.diagnostics.some((d) => d.code === "UNKNOWN_OPERATOR")).toBe(true);
   });
 });
