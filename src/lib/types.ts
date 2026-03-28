@@ -66,6 +66,10 @@ export interface QueryResponse {
   metadata: {
     rowsReturned: number;
     query: string;
+    columnTypes?: Record<string, string>;
+    truncated?: boolean;
+    nullCounts?: Record<string, number>;
+    numericSummary?: Record<string, { min: number; max: number; avg: number }>;
   };
   notice?: string;
 }

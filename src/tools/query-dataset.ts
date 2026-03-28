@@ -92,7 +92,7 @@ export async function handleQueryDataset(
     limit: number;
     offset: number;
     search?: string;
-    format?: "json" | "csv" | "geojson" | "markdown";
+    format?: "json" | "markdown";
   }
 ): Promise<ToolResult> {
   try {

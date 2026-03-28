@@ -264,25 +264,11 @@ export class SocrataClient {
     domain: string,
     datasetId: string,
     params: SoqlParams,
-    format: "json" | "csv" | "geojson" | "markdown" = "json"
+    format: "json" | "markdown" = "json"
   ): Promise<QueryResponse | string> {
     const queryString = this.buildQueryString(params);
-
-    // For csv and geojson, hit the native Socrata endpoint
-    if (format === "csv" || format === "geojson") {
-      const urlStr = `https://${domain}/resource/${datasetId}.${format}?${queryString}`;
-      const response = await this.fetchWithTimeout(urlStr);
-
-      if (!response.ok) {
-        const body = await response.text();
-        throw this.handleHttpError(response.status, body);
-      }
-
-      return response.text();
-    }
-
-    // For json and markdown, fetch JSON
     const urlStr = `https://${domain}/resource/${datasetId}.json?${queryString}`;
+
     const response = await this.fetchWithTimeout(urlStr);
 
     if (!response.ok) {
@@ -297,17 +283,92 @@ export class SocrataClient {
       return this.toMarkdownTable(results, queryString);
     }
 
+    // ── LLM-first enrichments ──
+
+    // Column types: so the LLM knows which fields are numeric vs text
+    // without a separate get_dataset_schema call
+    let columnTypes: Record<string, string> | undefined;
+    try {
+      const columns = await this.getColumns(domain, datasetId);
+      const colMap = new Map(columns.map((c) => [c.fieldName, c.type]));
+      const resultKeys = results.length > 0 ? Object.keys(results[0]).filter((k) => !k.startsWith(":")) : [];
+      if (resultKeys.length > 0) {
+        columnTypes = {};
+        for (const key of resultKeys) {
+          columnTypes[key] = colMap.get(key) ?? "unknown";
+        }
+      }
+    } catch {
+      // Schema not available — skip type hints
+    }
+
+    // Truncation warning: if results hit the limit, there's likely more data
+    const truncated = results.length >= params.limit;
+
+    // Null counts: which columns have missing data
+    let nullCounts: Record<string, number> | undefined;
+    if (results.length > 0) {
+      const counts: Record<string, number> = {};
+      const keys = Object.keys(results[0]).filter((k) => !k.startsWith(":"));
+      for (const key of keys) {
+        const nullCount = results.filter((r) => r[key] === undefined || r[key] === null).length;
+        if (nullCount > 0) {
+          counts[key] = nullCount;
+        }
+      }
+      if (Object.keys(counts).length > 0) {
+        nullCounts = counts;
+      }
+    }
+
+    // Numeric summary: min/max/avg for numeric columns (helps LLM contextualize values)
+    let numericSummary: Record<string, { min: number; max: number; avg: number }> | undefined;
+    if (results.length > 0 && columnTypes) {
+      const numericCols = Object.entries(columnTypes)
+        .filter(([, type]) => type === "number")
+        .map(([name]) => name);
+
+      if (numericCols.length > 0) {
+        numericSummary = {};
+        for (const col of numericCols) {
+          const values = results
+            .map((r) => Number(r[col]))
+            .filter((v) => !isNaN(v));
+          if (values.length > 0) {
+            numericSummary[col] = {
+              min: Math.min(...values),
+              max: Math.max(...values),
+              avg: Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100,
+            };
+          }
+        }
+        if (Object.keys(numericSummary).length === 0) {
+          numericSummary = undefined;
+        }
+      }
+    }
+
     const queryResponse: QueryResponse = {
       results,
       metadata: {
         rowsReturned: results.length,
         query: queryString,
+        columnTypes,
+        truncated: truncated || undefined,
+        nullCounts,
+        numericSummary,
       },
     };
 
     if (results.length === 0) {
       queryResponse.notice =
         "No rows matched this query. The data may not contain what you're looking for — inform the user rather than guessing.";
+    }
+
+    if (truncated) {
+      queryResponse.notice =
+        (queryResponse.notice ? queryResponse.notice + " " : "") +
+        `Results hit the limit (${params.limit}). There may be more data — add filters to narrow results, or increase the limit and use $offset to paginate.`;
     }
 
     return queryResponse;
