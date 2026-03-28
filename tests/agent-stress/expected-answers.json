@@ -1,0 +1,249 @@
+{
+  "Q1": {
+    "question": "Which Oregon county has the highest ratio of active businesses to registered voters?",
+    "expectedDatasets": ["tckn-sxa6", "8h6y-5uec", "6a4f-ecbi"],
+    "requiredColumns": ["county"],
+    "requiresMultiDataset": true,
+    "notes": "Needs businesses + voter registration joined on county"
+  },
+  "Q2": {
+    "question": "What are the top 5 state agencies by average employee salary?",
+    "expectedDatasets": ["4cmg-5yp4"],
+    "requiredColumns": ["agency_title", "annual_salary"],
+    "requiresAggregation": true
+  },
+  "Q3": {
+    "question": "How did wildfire frequency in Klamath County change decade over decade from 2000-2022?",
+    "expectedDatasets": ["fbwv-q84y"],
+    "requiredColumns": ["fireyear", "county"],
+    "requiresAggregation": true
+  },
+  "Q4": {
+    "question": "Which business entity types have grown fastest in Oregon since 2015?",
+    "expectedDatasets": ["tckn-sxa6", "esjy-u4fc"],
+    "requiredColumns": ["entity_type", "registry_date"],
+    "requiresAggregation": true
+  },
+  "Q5": {
+    "question": "What percentage of Oregon wildfires are human-caused vs lightning-caused, broken down by county?",
+    "expectedDatasets": ["fbwv-q84y"],
+    "requiredColumns": ["humanorlightning", "county"],
+    "requiresAggregation": true
+  },
+  "Q6": {
+    "question": "Find the 10 highest-paid state employee classifications and which agencies employ them",
+    "expectedDatasets": ["4cmg-5yp4"],
+    "requiredColumns": ["classification", "annual_salary", "agency_title"]
+  },
+  "Q7": {
+    "question": "Which Oregon counties have both high wildfire activity AND high business registration rates?",
+    "expectedDatasets": ["fbwv-q84y", "tckn-sxa6"],
+    "requiredColumns": ["county"],
+    "requiresMultiDataset": true
+  },
+  "Q8": {
+    "question": "What is the average time between business registration and the current date for active Portland businesses?",
+    "expectedDatasets": ["tckn-sxa6"],
+    "requiredColumns": ["registry_date", "city"]
+  },
+  "Q9": {
+    "question": "Compare wildfire acres burned per year in Oregon vs Washington state",
+    "expectedDatasets": ["fbwv-q84y"],
+    "requiredColumns": ["esttotalacres", "fireyear"],
+    "requiresMultiDomain": true
+  },
+  "Q10": {
+    "question": "Which state agencies spend the most per employee based on expenditure and salary data?",
+    "expectedDatasets": ["y9g9-xsxs", "4cmg-5yp4"],
+    "requiredColumns": ["agency"],
+    "requiresMultiDataset": true
+  },
+  "Q11": {
+    "question": "What are the seasonal patterns in Oregon wildfires — which months have the most ignitions?",
+    "expectedDatasets": ["fbwv-q84y"],
+    "requiredColumns": ["ign_datetime"],
+    "requiresAggregation": true
+  },
+  "Q12": {
+    "question": "Find all active businesses in Oregon with cannabis or marijuana in their name and show which cities they cluster in",
+    "expectedDatasets": ["tckn-sxa6"],
+    "requiredColumns": ["business_name", "city"]
+  },
+  "Q13": {
+    "question": "How has the mix of business entity types changed over the last 20 years?",
+    "expectedDatasets": ["tckn-sxa6"],
+    "requiredColumns": ["entity_type", "registry_date"],
+    "requiresAggregation": true
+  },
+  "Q14": {
+    "question": "What is the geographic distribution of Oregon's largest wildfires?",
+    "expectedDatasets": ["fbwv-q84y"],
+    "requiredColumns": ["esttotalacres", "county"]
+  },
+  "Q15": {
+    "question": "Which vendor received the most total state expenditure across all agencies and fiscal years?",
+    "expectedDatasets": ["y9g9-xsxs"],
+    "requiredColumns": ["vendor", "expense"],
+    "requiresAggregation": true
+  },
+  "Q16": {
+    "question": "Compare the number of active licensed contractors per county to active businesses per county",
+    "expectedDatasets": ["g77e-6bhs", "tckn-sxa6"],
+    "requiredColumns": ["county"],
+    "requiresMultiDataset": true
+  },
+  "Q17": {
+    "question": "What are the most common complaint types in the Oregon Consumer Complaints database?",
+    "expectedDatasets": ["2ix7-8hwk"],
+    "requiredColumns": ["complaint_description", "respondent"],
+    "requiresAggregation": true
+  },
+  "Q18": {
+    "question": "How do Oregon state salaries compare between full-time and part-time employees by agency?",
+    "expectedDatasets": ["4cmg-5yp4"],
+    "requiredColumns": ["full_part_time", "annual_salary", "agency_title"],
+    "requiresAggregation": true
+  },
+  "Q19": {
+    "question": "Find datasets about water quality or environmental monitoring across Oregon and Washington",
+    "expectedDatasets": [],
+    "requiredColumns": [],
+    "isDiscovery": true,
+    "requiresMultiDomain": true,
+    "notes": "Success = finding relevant datasets on either portal"
+  },
+  "Q20": {
+    "question": "What is the trend in new business registrations month-over-month for the past year?",
+    "expectedDatasets": ["esjy-u4fc"],
+    "requiredColumns": ["registry_date"],
+    "requiresAggregation": true
+  },
+  "Q21": {
+    "question": "Which Oregon counties have fire occurrence data but no corresponding voter registration data?",
+    "expectedDatasets": ["fbwv-q84y", "8h6y-5uec"],
+    "requiredColumns": ["county"],
+    "requiresMultiDataset": true
+  },
+  "Q22": {
+    "question": "Calculate the total state expenditure by budget class for fiscal year 2023 and rank them",
+    "expectedDatasets": ["y9g9-xsxs"],
+    "requiredColumns": ["budget_class", "expense", "fiscal_year"],
+    "requiresAggregation": true
+  },
+  "Q23": {
+    "question": "What are the top 10 most common business names in Oregon and how many of each exist?",
+    "expectedDatasets": ["tckn-sxa6"],
+    "requiredColumns": ["business_name"],
+    "requiresAggregation": true
+  },
+  "Q24": {
+    "question": "Find all datasets on data.oregon.gov that contain geographic point data",
+    "expectedDatasets": [],
+    "requiredColumns": [],
+    "isDiscovery": true,
+    "notes": "Success = finding datasets with point/location columns"
+  },
+  "Q25": {
+    "question": "How many active notaries are there per county in Oregon?",
+    "expectedDatasets": ["j2pk-zk6z"],
+    "requiredColumns": ["city", "state"],
+    "requiresAggregation": true,
+    "notes": "Notary dataset has city/state but no county column — acceptable if agent uses city as proxy"
+  },
+  "Q26": {
+    "question": "What is the correlation between wildfire size and whether the cause was human or lightning?",
+    "expectedDatasets": ["fbwv-q84y"],
+    "requiredColumns": ["esttotalacres", "humanorlightning"],
+    "requiresAggregation": true
+  },
+  "Q27": {
+    "question": "Find salary data across multiple state portals and compare average state employee pay",
+    "expectedDatasets": ["4cmg-5yp4"],
+    "requiredColumns": ["annual_salary"],
+    "requiresMultiDomain": true,
+    "requiresAggregation": true
+  },
+  "Q28": {
+    "question": "Which nonprofit corporations in Oregon were registered before 1950 and are still active?",
+    "expectedDatasets": ["8kyv-b2kw"],
+    "requiredColumns": ["business_name", "registry_date"]
+  },
+  "Q29": {
+    "question": "What fraction of state agency expenditures go to the top 10 vendors vs all other vendors?",
+    "expectedDatasets": ["y9g9-xsxs"],
+    "requiredColumns": ["vendor", "expense"],
+    "requiresAggregation": true
+  },
+  "Q30": {
+    "question": "Identify Oregon datasets that could be joined on county",
+    "expectedDatasets": [],
+    "requiredColumns": [],
+    "isDiscovery": true,
+    "notes": "Success = finding multiple datasets with county columns"
+  },
+  "Q31": {
+    "question": "What is the year-over-year growth rate of new UCC filings in Oregon?",
+    "expectedDatasets": ["snfi-f79b"],
+    "requiredColumns": ["filing_date"],
+    "requiresAggregation": true
+  },
+  "Q32": {
+    "question": "Find the largest single wildfire in each Oregon county and when it occurred",
+    "expectedDatasets": ["fbwv-q84y"],
+    "requiredColumns": ["firename", "esttotalacres", "county"],
+    "requiresAggregation": true
+  },
+  "Q33": {
+    "question": "Which Oregon cities have seen the most business registrations in 2024?",
+    "expectedDatasets": ["esjy-u4fc", "tckn-sxa6"],
+    "requiredColumns": ["city", "registry_date"],
+    "requiresAggregation": true
+  },
+  "Q34": {
+    "question": "Compare library statistics between the 5 most populated Oregon counties",
+    "expectedDatasets": ["8zw7-zgjw"],
+    "requiredColumns": ["county", "libraryname"],
+    "requiresAggregation": true
+  },
+  "Q35": {
+    "question": "What data does New York City's open data portal have about restaurant inspections?",
+    "expectedDatasets": ["43nn-pn8j"],
+    "requiredColumns": [],
+    "requiresMultiDomain": true,
+    "notes": "NYC domain — success = finding restaurant inspection dataset"
+  },
+  "Q36": {
+    "question": "How many different categories of data does each Socrata portal have?",
+    "expectedDatasets": [],
+    "requiredColumns": [],
+    "isDiscovery": true,
+    "requiresMultiDomain": true,
+    "notes": "Success = querying categories across multiple portals"
+  },
+  "Q37": {
+    "question": "Find datasets about salmon or fish populations across all available Socrata portals",
+    "expectedDatasets": [],
+    "requiredColumns": [],
+    "isDiscovery": true,
+    "requiresMultiDomain": true,
+    "notes": "Success = finding fish/salmon datasets on any portal"
+  },
+  "Q38": {
+    "question": "What is the average wildfire response time (ignition to control) for fires over 100 acres?",
+    "expectedDatasets": ["fbwv-q84y"],
+    "requiredColumns": ["ign_datetime", "control_datetime", "esttotalacres"]
+  },
+  "Q39": {
+    "question": "Cross-reference CCB active contractor licenses with consumer complaints",
+    "expectedDatasets": ["g77e-6bhs", "2ix7-8hwk"],
+    "requiredColumns": [],
+    "requiresMultiDataset": true
+  },
+  "Q40": {
+    "question": "Build a county-level economic profile for Multnomah County using every available Oregon dataset",
+    "expectedDatasets": ["tckn-sxa6", "4cmg-5yp4", "y9g9-xsxs", "8zw7-zgjw", "8h6y-5uec"],
+    "requiredColumns": ["county"],
+    "requiresMultiDataset": true,
+    "notes": "Best effort — more datasets = better"
+  }
+}
