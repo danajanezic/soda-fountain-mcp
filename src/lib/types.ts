@@ -118,3 +118,47 @@ export interface ValidationResult {
   valid: boolean;
   diagnostics: Diagnostic[];
 }
+
+// --- Correlation Key Index Types ---
+
+export const KeyTypeEnum = z.enum([
+  "geographic",
+  "temporal",
+  "entity",
+  "fiscal",
+  "enforcement",
+]);
+export type KeyType = z.infer<typeof KeyTypeEnum>;
+
+export const CorrelationDatasetEntrySchema = z.object({
+  domain: z.string(),
+  id: z.string().regex(/^[a-z0-9]{4}-[a-z0-9]{4}$/),
+  name: z.string(),
+  column: z.string(),
+  columnType: z.string(),
+  columnNote: z.string().optional(),
+});
+export type CorrelationDatasetEntry = z.infer<typeof CorrelationDatasetEntrySchema>;
+
+export const CorrelationKeySchema = z.object({
+  key: z.string(),
+  type: KeyTypeEnum,
+  description: z.string(),
+  crossStateJoin: z.boolean(),
+  normalizations: z.array(z.string()),
+  datasets: z.array(CorrelationDatasetEntrySchema),
+});
+export type CorrelationKey = z.infer<typeof CorrelationKeySchema>;
+
+export const DomainEntrySchema = z.object({
+  state: z.string().length(2),
+  name: z.string(),
+});
+export type DomainEntry = z.infer<typeof DomainEntrySchema>;
+
+export const CorrelationKeySeedSchema = z.object({
+  version: z.string(),
+  domains: z.record(z.string(), DomainEntrySchema),
+  keys: z.array(CorrelationKeySchema),
+});
+export type CorrelationKeySeed = z.infer<typeof CorrelationKeySeedSchema>;
