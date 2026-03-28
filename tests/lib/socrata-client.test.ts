@@ -112,6 +112,104 @@ describe("SocrataClient", () => {
     });
   });
 
+  describe("queryDataset", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("builds SoQL URL with all params", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve([{ city: "PORTLAND" }]),
+        })
+      );
+
+      const client = new SocrataClient();
+      const result = await client.queryDataset("tckn-sxa6", {
+        select: "city, count(*)",
+        where: "state='OR'",
+        group: "city",
+        having: "count(*) > 5",
+        order: "count(*) DESC",
+        limit: 10,
+        offset: 0,
+      });
+
+      const calledUrl = vi.mocked(fetch).mock.calls[0][0] as string;
+      expect(calledUrl).toContain("$select=");
+      expect(calledUrl).toContain("$where=");
+      expect(calledUrl).toContain("$group=");
+      expect(calledUrl).toContain("$having=");
+      expect(calledUrl).toContain("$order=");
+      expect(calledUrl).toContain("$limit=10");
+      expect(result.results).toHaveLength(1);
+      expect(result.metadata.rowsReturned).toBe(1);
+    });
+
+    it("maps search param to $q", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve([]),
+        })
+      );
+
+      const client = new SocrataClient();
+      await client.queryDataset("tckn-sxa6", {
+        search: "coffee",
+        limit: 100,
+        offset: 0,
+      });
+
+      const calledUrl = vi.mocked(fetch).mock.calls[0][0] as string;
+      expect(calledUrl).toContain("$q=coffee");
+    });
+
+    it("includes notice on empty results", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve([]),
+        })
+      );
+
+      const client = new SocrataClient();
+      const result = await client.queryDataset("tckn-sxa6", {
+        limit: 100,
+        offset: 0,
+      });
+
+      expect(result.results).toHaveLength(0);
+      expect(result.notice).toContain("No rows matched");
+    });
+
+    it("returns error for bad query (400)", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 400,
+          text: () => Promise.resolve('{"message": "Invalid SoQL"}'),
+        })
+      );
+
+      const client = new SocrataClient();
+      await expect(
+        client.queryDataset("tckn-sxa6", { limit: 100, offset: 0 })
+      ).rejects.toMatchObject({
+        error: true,
+        code: "BAD_QUERY",
+      });
+    });
+  });
+
   describe("getMetadata", () => {
     beforeEach(() => {
       vi.restoreAllMocks();

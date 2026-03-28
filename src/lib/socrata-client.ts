@@ -4,6 +4,8 @@ import type {
   SearchResponse,
   DatasetSchema,
   ColumnDef,
+  SoqlParams,
+  QueryResponse,
 } from "./types.js";
 
 const CATALOG_BASE = "https://api.us.socrata.com/api/catalog/v1";
@@ -150,6 +152,49 @@ export class SocrataClient {
         returned: results.length,
       },
     };
+  }
+
+  async queryDataset(
+    datasetId: string,
+    params: SoqlParams
+  ): Promise<QueryResponse> {
+    const queryParts: string[] = [];
+
+    if (params.select) queryParts.push(`$select=${encodeURIComponent(params.select)}`);
+    if (params.where) queryParts.push(`$where=${encodeURIComponent(params.where)}`);
+    if (params.group) queryParts.push(`$group=${encodeURIComponent(params.group)}`);
+    if (params.having) queryParts.push(`$having=${encodeURIComponent(params.having)}`);
+    if (params.order) queryParts.push(`$order=${encodeURIComponent(params.order)}`);
+    if (params.search) queryParts.push(`$q=${encodeURIComponent(params.search)}`);
+    queryParts.push(`$limit=${params.limit}`);
+    if (params.offset > 0) queryParts.push(`$offset=${params.offset}`);
+
+    const queryString = queryParts.join("&");
+    const urlStr = `${DATA_BASE}/resource/${datasetId}.json?${queryString}`;
+
+    const response = await this.fetchWithTimeout(urlStr);
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw this.handleHttpError(response.status, body);
+    }
+
+    const results: Record<string, unknown>[] = await response.json();
+
+    const queryResponse: QueryResponse = {
+      results,
+      metadata: {
+        rowsReturned: results.length,
+        query: queryString,
+      },
+    };
+
+    if (results.length === 0) {
+      queryResponse.notice =
+        "No rows matched this query. The data may not contain what you're looking for — inform the user rather than guessing.";
+    }
+
+    return queryResponse;
   }
 
   async getMetadata(datasetId: string): Promise<DatasetSchema> {
