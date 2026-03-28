@@ -8,6 +8,7 @@ import { handleSearchDatasets } from "./tools/search-datasets.js";
 import { handleGetDatasetSchema } from "./tools/get-dataset-schema.js";
 import { handleQueryDataset } from "./tools/query-dataset.js";
 import { handleValidateSoql } from "./tools/validate-soql.js";
+import { registerPrompts } from "./prompts.js";
 
 const appToken = process.env.SOCRATA_API_KEY;
 const client = new SocrataClient(appToken);
@@ -16,6 +17,8 @@ const server = new McpServer({
   name: "socrata-open-data",
   version: "2.0.0",
 });
+
+registerPrompts(server);
 
 const domainSchema = z
   .string()
