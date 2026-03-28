@@ -212,7 +212,7 @@ export class SocrataClient {
     url.searchParams.set("domains", params.domain);
     url.searchParams.set("search_context", params.domain);
     url.searchParams.set("only", "datasets");
-    url.searchParams.set("limit", "20");
+    url.searchParams.set("limit", "50");
 
     if (params.query) {
       url.searchParams.set("q", params.query);
@@ -255,12 +255,15 @@ export class SocrataClient {
         .split(/[\s,]+/)
         .filter((w) => w.length > 2);
 
-      // Expand query words with common stems/synonyms in government data
+      // Expand query words with common stems/synonyms in government data.
+      // Also maps generic question-framing words to content terms that
+      // naive agents often extract as their first keywords.
       const expansions: Record<string, string[]> = {
-        wildfire: ["fire", "wildfire", "burn", "acre"],
-        fire: ["fire", "wildfire", "burn", "acre"],
+        // Direct topic expansions
+        wildfire: ["fire", "wildfire", "burn", "acre", "firename"],
+        fire: ["fire", "wildfire", "burn", "acre", "firename"],
         salary: ["salary", "annual_salary", "wage", "pay", "compensation"],
-        salaries: ["salary", "annual_salary", "wage", "pay"],
+        salaries: ["salary", "annual_salary", "wage", "pay", "compensation"],
         business: ["business", "business_name", "entity", "registry"],
         businesses: ["business", "business_name", "entity", "registry"],
         registration: ["registry", "registration", "registered"],
@@ -269,16 +272,53 @@ export class SocrataClient {
         complaints: ["complaint", "respondent", "complaint_description"],
         expenditure: ["expense", "expenditure", "vendor", "budget"],
         expenditures: ["expense", "expenditure", "vendor", "budget"],
+        spending: ["expense", "expenditure", "vendor", "budget"],
         contractor: ["license", "contractor", "ccb"],
+        contractors: ["license", "contractor", "ccb"],
         active: ["active", "business", "license", "notary"],
         cannabis: ["cannabis", "marijuana", "business_name"],
         marijuana: ["cannabis", "marijuana", "business_name"],
         notary: ["notary", "commission", "notaries"],
+        notaries: ["notary", "commission", "notaries"],
         voter: ["voter", "registration", "party", "partycount"],
-        library: ["library", "libraryname", "circulation"],
+        library: ["library", "libraryname", "circulation", "programs"],
+        libraries: ["library", "libraryname", "circulation", "programs"],
         restaurant: ["restaurant", "inspection", "violation"],
         salmon: ["salmon", "fish", "species", "habitat"],
+        fish: ["salmon", "fish", "species", "habitat", "wdfw"],
         ucc: ["ucc", "filing", "secured", "lien"],
+        filing: ["ucc", "filing", "secured", "lien"],
+        filings: ["ucc", "filing", "secured", "lien"],
+        nonprofit: ["nonprofit", "nonprofit_type", "entity_type"],
+        nonprofits: ["nonprofit", "nonprofit_type", "entity_type"],
+        employee: ["salary", "annual_salary", "classification", "agency"],
+        employees: ["salary", "annual_salary", "classification", "agency"],
+        vendor: ["vendor", "expense", "expenditure"],
+        vendors: ["vendor", "expense", "expenditure"],
+        county: ["county", "county_name", "county_code"],
+        counties: ["county", "county_name", "county_code"],
+
+        // Generic question words → topic expansions
+        // These are words naive agents extract that don't help with search
+        // but hint at what topic the question is about
+        paid: ["salary", "annual_salary", "wage", "compensation"],
+        highest: ["salary", "expense", "annual_salary"],
+        average: ["salary", "annual_salary", "expense"],
+        total: ["expense", "expenditure", "sum", "budget"],
+        common: ["business_name", "complaint", "type", "count"],
+        percentage: ["count", "rate", "percent"],
+        seasonal: ["month", "date", "datetime", "ign_datetime"],
+        patterns: ["month", "date", "datetime", "trend"],
+        geographic: ["county", "city", "lat", "long", "location", "point"],
+        distribution: ["county", "city", "type", "group"],
+        fraction: ["expense", "vendor", "expenditure", "percent"],
+        trend: ["year", "date", "month", "fiscal_year", "registry_date"],
+        growth: ["year", "date", "registry_date", "count"],
+        largest: ["acre", "esttotalacres", "max", "size"],
+        statistics: ["count", "total", "circulation", "programs"],
+        response: ["datetime", "ign_datetime", "control_datetime"],
+        inspection: ["restaurant", "inspection", "violation", "grade"],
+        inspections: ["restaurant", "inspection", "violation", "grade"],
       };
 
       const expandedWords = new Set(queryWords);
@@ -293,22 +333,88 @@ export class SocrataClient {
         const nameLower = ds.name.toLowerCase();
         const descLower = (ds.description ?? "").toLowerCase();
         let boost = 0;
+
         for (const word of expandedWords) {
           // Exact column match (e.g., query "salary" matches column "salary")
-          if (colNamesLower.some((c) => c === word)) boost += 3;
+          if (colNamesLower.some((c) => c === word)) boost += 4;
           // Partial column match (e.g., query "fire" matches "firename")
-          else if (colNamesLower.some((c) => c.includes(word))) boost += 2;
+          else if (colNamesLower.some((c) => c.includes(word))) boost += 3;
           // Column name contains the word as a substring
           else if (colNamesJoined.includes(word)) boost += 1;
-          // Name match (e.g., query "fire" in dataset name "Fire Occurrence")
-          if (nameLower.includes(word)) boost += 1;
+          // Name match
+          if (nameLower.includes(word)) boost += 2;
           // Description match
           if (descLower.includes(word)) boost += 1;
         }
+
+        // Boost datasets with more columns (richer data, more likely to be
+        // the primary dataset for a topic vs a small supplementary table)
+        if (ds.columns.length > 10) boost += 2;
+        else if (ds.columns.length > 5) boost += 1;
+
+        // Penalize datasets that are likely metadata/administrative
+        if (nameLower.includes("rules") || nameLower.includes("newsletter") ||
+            nameLower.includes("social media") || nameLower.includes("bills signed") ||
+            nameLower.includes("grants") && !nameLower.includes("data")) {
+          boost -= 3;
+        }
+
         return { ds, boost };
       });
 
       scored.sort((a, b) => b.boost - a.boost);
+
+      // If the top result has low boost, the original search keywords were likely
+      // generic (e.g., "percentage", "seasonal"). Try a supplementary search
+      // with the expanded content keywords to find more relevant datasets.
+      // Threshold of 5 means: if the best match has only weak/incidental column
+      // matches, search again with more specific terms.
+      if (scored.length > 0 && scored[0].boost < 5) {
+        const contentWords = [...expandedWords].filter((w) => !queryWords.includes(w)).slice(0, 3);
+        if (contentWords.length > 0) {
+          try {
+            const suppUrl = new URL(CATALOG_BASE);
+            suppUrl.searchParams.set("domains", params.domain);
+            suppUrl.searchParams.set("search_context", params.domain);
+            suppUrl.searchParams.set("only", "datasets");
+            suppUrl.searchParams.set("limit", "20");
+            suppUrl.searchParams.set("q", contentWords.join(" "));
+            const suppResponse = await this.fetchWithTimeout(suppUrl.toString());
+            if (suppResponse.ok) {
+              const suppData = await suppResponse.json();
+              const existingIds = new Set(scored.map((s) => s.ds.id));
+              for (const r of suppData.results || []) {
+                const id = (r.resource?.id as string) ?? "";
+                if (existingIds.has(id)) continue;
+                const fieldNames: string[] = (r.resource?.columns_field_name as string[] | undefined) ?? [];
+                const ds: DatasetSummary = {
+                  id,
+                  name: (r.resource?.name as string) ?? "",
+                  description: (r.resource?.description as string) ?? "",
+                  category: (r.classification?.domain_category as string) ?? "",
+                  domain: params.domain,
+                  updatedAt: (r.resource?.updatedAt as string) ?? "",
+                  columns: fieldNames,
+                };
+                // Score supplementary results with same logic
+                const colNamesLower = ds.columns.map((c) => c.toLowerCase());
+                let boost = 0;
+                for (const word of expandedWords) {
+                  if (colNamesLower.some((c) => c === word)) boost += 4;
+                  else if (colNamesLower.some((c) => c.includes(word))) boost += 3;
+                  if (ds.name.toLowerCase().includes(word)) boost += 2;
+                }
+                if (ds.columns.length > 10) boost += 2;
+                scored.push({ ds, boost });
+              }
+              scored.sort((a, b) => b.boost - a.boost);
+            }
+          } catch {
+            // Supplementary search failed — continue with original results
+          }
+        }
+      }
+
       const reranked = scored.map((s) => s.ds);
 
       return {
