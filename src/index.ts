@@ -8,6 +8,7 @@ import { handleSearchDatasets } from "./tools/search-datasets.js";
 import { handleGetDatasetSchema } from "./tools/get-dataset-schema.js";
 import { handleQueryDataset } from "./tools/query-dataset.js";
 import { handleValidateSoql } from "./tools/validate-soql.js";
+import { handleFindCorrelationKeys } from "./tools/find-correlation-keys.js";
 import { registerPrompts } from "./prompts.js";
 
 const appToken = process.env.SOCRATA_API_KEY;
@@ -191,6 +192,37 @@ server.registerTool(
         },
       ],
     };
+  }
+);
+
+// ── Correlation key discovery ──
+
+server.registerTool(
+  "find_correlation_keys",
+  {
+    title: "Find Correlation Keys",
+    description:
+      "Discover which datasets can be joined or compared across Socrata portals. " +
+      "Returns correlation keys (county, zip, year, NAICS, etc.) with the exact column names " +
+      "and types in each dataset, plus normalization hints for cross-dataset queries. " +
+      "Use this before building multi-dataset analyses to find joinable columns.",
+    inputSchema: {
+      key: z.string().optional().describe(
+        "Specific correlation key to look up (e.g., 'county', 'zip', 'naics', 'calendar_year')"
+      ),
+      datasetId: datasetIdSchema.optional().describe(
+        "Find correlation keys for a specific dataset — what can it be joined with?"
+      ),
+      domain: domainSchema.optional().describe(
+        "Filter to keys available on a specific portal"
+      ),
+      crossStateOnly: z.boolean().optional().describe(
+        "If true, only return keys viable for cross-state comparisons (zip, NAICS, calendar_year, etc.)"
+      ),
+    },
+  },
+  async ({ key, datasetId, domain, crossStateOnly }) => {
+    return handleFindCorrelationKeys({ key, datasetId, domain, crossStateOnly });
   }
 );
 
