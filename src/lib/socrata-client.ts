@@ -116,6 +116,7 @@ export class SocrataClient {
   }): Promise<SearchResponse> {
     const url = new URL(CATALOG_BASE);
     url.searchParams.set("domains", "data.oregon.gov");
+    url.searchParams.set("search_context", "data.oregon.gov");
     url.searchParams.set("only", "datasets");
     url.searchParams.set("limit", "20");
 
