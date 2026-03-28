@@ -255,16 +255,55 @@ export class SocrataClient {
         .split(/[\s,]+/)
         .filter((w) => w.length > 2);
 
+      // Expand query words with common stems/synonyms in government data
+      const expansions: Record<string, string[]> = {
+        wildfire: ["fire", "wildfire", "burn", "acre"],
+        fire: ["fire", "wildfire", "burn", "acre"],
+        salary: ["salary", "annual_salary", "wage", "pay", "compensation"],
+        salaries: ["salary", "annual_salary", "wage", "pay"],
+        business: ["business", "business_name", "entity", "registry"],
+        businesses: ["business", "business_name", "entity", "registry"],
+        registration: ["registry", "registration", "registered"],
+        registrations: ["registry", "registration", "registered"],
+        complaint: ["complaint", "respondent", "complaint_description"],
+        complaints: ["complaint", "respondent", "complaint_description"],
+        expenditure: ["expense", "expenditure", "vendor", "budget"],
+        expenditures: ["expense", "expenditure", "vendor", "budget"],
+        contractor: ["license", "contractor", "ccb"],
+        active: ["active", "business", "license", "notary"],
+        cannabis: ["cannabis", "marijuana", "business_name"],
+        marijuana: ["cannabis", "marijuana", "business_name"],
+        notary: ["notary", "commission", "notaries"],
+        voter: ["voter", "registration", "party", "partycount"],
+        library: ["library", "libraryname", "circulation"],
+        restaurant: ["restaurant", "inspection", "violation"],
+        salmon: ["salmon", "fish", "species", "habitat"],
+        ucc: ["ucc", "filing", "secured", "lien"],
+      };
+
+      const expandedWords = new Set(queryWords);
+      for (const word of queryWords) {
+        const extra = expansions[word];
+        if (extra) extra.forEach((e) => expandedWords.add(e));
+      }
+
       const scored = results.map((ds) => {
         const colNamesLower = ds.columns.map((c) => c.toLowerCase());
+        const colNamesJoined = colNamesLower.join(" ");
+        const nameLower = ds.name.toLowerCase();
+        const descLower = (ds.description ?? "").toLowerCase();
         let boost = 0;
-        for (const word of queryWords) {
+        for (const word of expandedWords) {
           // Exact column match (e.g., query "salary" matches column "salary")
           if (colNamesLower.some((c) => c === word)) boost += 3;
           // Partial column match (e.g., query "fire" matches "firename")
           else if (colNamesLower.some((c) => c.includes(word))) boost += 2;
+          // Column name contains the word as a substring
+          else if (colNamesJoined.includes(word)) boost += 1;
           // Name match (e.g., query "fire" in dataset name "Fire Occurrence")
-          if (ds.name.toLowerCase().includes(word)) boost += 1;
+          if (nameLower.includes(word)) boost += 1;
+          // Description match
+          if (descLower.includes(word)) boost += 1;
         }
         return { ds, boost };
       });
@@ -298,7 +337,13 @@ export class SocrataClient {
     if (params.group) queryParts.push(`$group=${encodeURIComponent(params.group)}`);
     if (params.having) queryParts.push(`$having=${encodeURIComponent(params.having)}`);
     if (params.order) queryParts.push(`$order=${encodeURIComponent(params.order)}`);
-    if (params.search) queryParts.push(`$q=${encodeURIComponent(params.search)}`);
+    if (params.search) {
+      // Socrata's $q treats spaces as AND — multi-word searches are often too
+      // restrictive and return 0 results. Use only the first word for broader
+      // matches. LLMs can use $where with LIKE for precise multi-term filtering.
+      const firstWord = params.search.trim().split(/\s+/)[0];
+      queryParts.push(`$q=${encodeURIComponent(firstWord)}`);
+    }
     queryParts.push(`$limit=${params.limit}`);
     if (params.offset > 0) queryParts.push(`$offset=${params.offset}`);
 
@@ -349,8 +394,16 @@ export class SocrataClient {
       // Schema not available — skip enrichments
     }
 
-    // Truncation warning: if results hit the limit, there's likely more data
-    const truncated = results.length >= params.limit;
+    // Truncation: only warn when the agent built a targeted query that hit a wall.
+    // Don't warn for:
+    // - Aggregated queries ($group): intentional top-N groups
+    // - Ordered queries ($order): intentional top-N/bottom-N ranked results
+    // - Exploratory queries (no $where/$group/$order): just browsing the dataset
+    // Only warn when there's a $where filter without $group/$order — meaning
+    // the agent filtered for specific data and might be missing some.
+    const hasFilter = !!params.where;
+    const isIntentionallyBounded = !!params.group || !!params.order;
+    const truncated = hasFilter && !isIntentionallyBounded && results.length >= params.limit;
 
     // Null counts: which columns have missing data
     let nullCounts: Record<string, number> | undefined;
