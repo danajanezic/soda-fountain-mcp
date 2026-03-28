@@ -15,8 +15,8 @@ describe("levenshteinDistance", () => {
     expect(levenshteinDistance("LIEK", "LIKE")).toBe(2);
   });
 
-  it("returns correct distance for insertion", () => {
-    expect(levenshteinDistance("BEWTEEN", "BETWEEN")).toBe(1);
+  it("returns correct distance for transposition pair", () => {
+    expect(levenshteinDistance("BEWTEEN", "BETWEEN")).toBe(2);
   });
 
   it("is case-insensitive", () => {

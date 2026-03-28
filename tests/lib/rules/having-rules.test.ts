@@ -8,12 +8,12 @@ describe("validateHaving", () => {
   });
 
   it("detects unknown operator", () => {
-    const result = validateHaving("count(*) GRAETER 5");
+    const result = validateHaving("count(*) > 5 ANND sum(x) > 10");
     expect(result.some((d) => d.code === "UNKNOWN_OPERATOR")).toBe(true);
   });
 
   it("sets clause to $having", () => {
-    const result = validateHaving("count(*) GRAETER 5");
+    const result = validateHaving("count(*) > 5 ANND sum(x) > 10");
     expect(result.every((d) => d.clause === "$having")).toBe(true);
   });
 });

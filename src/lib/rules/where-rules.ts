@@ -25,7 +25,7 @@ function checkOperators(value: string): Diagnostic[] {
     // Skip known valid things
     if (isKnownOperator(upper)) continue;
     if (isKnownFunction(token)) continue;
-    if (["CASE", "WHEN", "THEN", "ELSE", "END", "AS", "DISTINCT", "NULL", "NOT", "TRUE", "FALSE"].includes(upper)) continue;
+    if (["CASE", "WHEN", "THEN", "ELSE", "END", "AS", "DISTINCT", "NULL", "NOT", "IS", "TRUE", "FALSE"].includes(upper)) continue;
 
     // Check if it looks like a misspelled operator (not all-lowercase = likely intended as keyword)
     if (token !== token.toLowerCase()) {
