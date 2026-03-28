@@ -40,7 +40,7 @@ describe("SocrataClient", () => {
         expect.any(Object)
       );
       expect(result.results).toHaveLength(1);
-      expect(result.results[0]).toEqual({
+      expect(result.results[0]).toMatchObject({
         id: "fbwv-q84y",
         name: "ODF Fire Data",
         description: "Fire data",
@@ -48,6 +48,7 @@ describe("SocrataClient", () => {
         domain: "data.oregon.gov",
         updatedAt: "2023-01-01T00:00:00.000Z",
       });
+      expect(result.results[0]).toHaveProperty("columns");
       expect(result.metadata.totalResults).toBe(1);
     });
 

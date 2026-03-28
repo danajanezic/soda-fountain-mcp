@@ -36,6 +36,7 @@ export interface DatasetSummary {
   category: string;
   domain: string;
   updatedAt: string;
+  columns: string[];
 }
 
 // Domain info from catalog API
@@ -66,6 +67,7 @@ export interface QueryResponse {
   metadata: {
     rowsReturned: number;
     query: string;
+    datasetDescription?: string;
     columnTypes?: Record<string, string>;
     truncated?: boolean;
     nullCounts?: Record<string, number>;

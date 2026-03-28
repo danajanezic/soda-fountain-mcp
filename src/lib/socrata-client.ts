@@ -41,23 +41,28 @@ const KNOWN_DOMAINS: DomainInfo[] = [
 
 export class SocrataClient {
   private appToken?: string;
-  private schemaCache = new Map<string, { columns: ColumnDef[]; fetchedAt: number }>();
+  private schemaCache = new Map<string, { schema: DatasetSchema; fetchedAt: number }>();
   private static SCHEMA_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
   constructor(appToken?: string) {
     this.appToken = appToken;
   }
 
-  /** Get column definitions for a dataset, with caching. */
-  async getColumns(domain: string, datasetId: string): Promise<ColumnDef[]> {
+  /** Get cached schema for a dataset. */
+  private async getCachedSchema(domain: string, datasetId: string): Promise<DatasetSchema> {
     const key = `${domain}/${datasetId}`;
     const cached = this.schemaCache.get(key);
     if (cached && Date.now() - cached.fetchedAt < SocrataClient.SCHEMA_TTL_MS) {
-      return cached.columns;
+      return cached.schema;
     }
     const schema = await this.getMetadata(domain, datasetId);
-    this.schemaCache.set(key, { columns: schema.columns, fetchedAt: Date.now() });
-    return schema.columns;
+    this.schemaCache.set(key, { schema, fetchedAt: Date.now() });
+    return schema;
+  }
+
+  /** Get column definitions for a dataset, with caching. */
+  async getColumns(domain: string, datasetId: string): Promise<ColumnDef[]> {
+    return (await this.getCachedSchema(domain, datasetId)).columns;
   }
 
   private buildHeaders(): Record<string, string> {
@@ -226,15 +231,55 @@ export class SocrataClient {
     const data = await response.json();
 
     const results: DatasetSummary[] = (data.results || []).map(
-      (r: Record<string, Record<string, unknown>>) => ({
-        id: r.resource?.id ?? "",
-        name: r.resource?.name ?? "",
-        description: r.resource?.description ?? "",
-        category: r.classification?.domain_category ?? "",
-        domain: params.domain,
-        updatedAt: r.resource?.updatedAt ?? "",
-      })
+      (r: Record<string, Record<string, unknown>>) => {
+        const fieldNames: string[] =
+          (r.resource?.columns_field_name as string[] | undefined) ?? [];
+        return {
+          id: (r.resource?.id as string) ?? "",
+          name: (r.resource?.name as string) ?? "",
+          description: (r.resource?.description as string) ?? "",
+          category: (r.classification?.domain_category as string) ?? "",
+          domain: params.domain,
+          updatedAt: (r.resource?.updatedAt as string) ?? "",
+          columns: fieldNames,
+        };
+      }
     );
+
+    // Re-rank by column relevance: if the search query words appear in
+    // column names, boost that dataset to the top. This helps LLMs find
+    // the right dataset when Socrata's text-relevance ranking misses.
+    if (params.query) {
+      const queryWords = params.query
+        .toLowerCase()
+        .split(/[\s,]+/)
+        .filter((w) => w.length > 2);
+
+      const scored = results.map((ds) => {
+        const colNamesLower = ds.columns.map((c) => c.toLowerCase());
+        let boost = 0;
+        for (const word of queryWords) {
+          // Exact column match (e.g., query "salary" matches column "salary")
+          if (colNamesLower.some((c) => c === word)) boost += 3;
+          // Partial column match (e.g., query "fire" matches "firename")
+          else if (colNamesLower.some((c) => c.includes(word))) boost += 2;
+          // Name match (e.g., query "fire" in dataset name "Fire Occurrence")
+          if (ds.name.toLowerCase().includes(word)) boost += 1;
+        }
+        return { ds, boost };
+      });
+
+      scored.sort((a, b) => b.boost - a.boost);
+      const reranked = scored.map((s) => s.ds);
+
+      return {
+        results: reranked,
+        metadata: {
+          totalResults: data.resultSetSize ?? 0,
+          returned: reranked.length,
+        },
+      };
+    }
 
     return {
       results,
@@ -285,12 +330,14 @@ export class SocrataClient {
 
     // ── LLM-first enrichments ──
 
-    // Column types: so the LLM knows which fields are numeric vs text
+    // Column types + dataset description: so the LLM knows what it's looking at
     // without a separate get_dataset_schema call
     let columnTypes: Record<string, string> | undefined;
+    let datasetDescription: string | undefined;
     try {
-      const columns = await this.getColumns(domain, datasetId);
-      const colMap = new Map(columns.map((c) => [c.fieldName, c.type]));
+      const schema = await this.getCachedSchema(domain, datasetId);
+      datasetDescription = schema.description || schema.name;
+      const colMap = new Map(schema.columns.map((c) => [c.fieldName, c.type]));
       const resultKeys = results.length > 0 ? Object.keys(results[0]).filter((k) => !k.startsWith(":")) : [];
       if (resultKeys.length > 0) {
         columnTypes = {};
@@ -299,7 +346,7 @@ export class SocrataClient {
         }
       }
     } catch {
-      // Schema not available — skip type hints
+      // Schema not available — skip enrichments
     }
 
     // Truncation warning: if results hit the limit, there's likely more data
@@ -353,6 +400,7 @@ export class SocrataClient {
       metadata: {
         rowsReturned: results.length,
         query: queryString,
+        datasetDescription,
         columnTypes,
         truncated: truncated || undefined,
         nullCounts,
