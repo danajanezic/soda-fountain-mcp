@@ -278,4 +278,41 @@ describe("SocrataClient", () => {
       });
     });
   });
+
+  describe("error handling", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("handles network timeout", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockRejectedValue(new DOMException("Aborted", "AbortError"))
+      );
+
+      const client = new SocrataClient();
+      await expect(client.searchCatalog({ query: "test" })).rejects.toThrow();
+    });
+
+    it("handles 429 rate limit", () => {
+      const client = new SocrataClient();
+      const err = client.handleHttpError(429, "{}");
+      expect(err.code).toBe("RATE_LIMITED");
+      expect(err.recoverable).toBe(true);
+    });
+
+    it("handles 202 processing", () => {
+      const client = new SocrataClient();
+      const err = client.handleHttpError(202, "{}");
+      expect(err.code).toBe("PROCESSING");
+      expect(err.recoverable).toBe(true);
+    });
+
+    it("handles 403 access denied", () => {
+      const client = new SocrataClient();
+      const err = client.handleHttpError(403, "{}");
+      expect(err.code).toBe("ACCESS_DENIED");
+      expect(err.recoverable).toBe(false);
+    });
+  });
 });
