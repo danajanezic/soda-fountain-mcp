@@ -628,6 +628,49 @@ GET https://api.us.socrata.com/api/catalog/v1/domain_categories?domains=data.ore
 
 ---
 
+## Cross-Dataset Aggregation Opportunities
+
+The SODA API doesn't support cross-dataset joins directly, but an AI agent can query each dataset independently (e.g., with `GROUP BY county` or `GROUP BY fiscal_year`) and combine the results. The following join keys appear across multiple datasets:
+
+### Common Join Keys
+
+| Join Key | Datasets |
+|----------|----------|
+| **county** | Active Businesses (`tckn-sxa6`), Fire Occurrence (`fbwv-q84y`), Voter Registration (`8h6y-5uec`), Library Statistics (`8zw7-zgjw`), Workers' Comp Employers (`q9zj-c8r2`), CCB Licenses (`g77e-6bhs`), Consumer Complaints (`2ix7-8hwk`) |
+| **city / state / zip** | 20+ business and professional registration datasets |
+| **fiscal_year / year** | Agency Salaries (`4cmg-5yp4`), Agency Expenditures (`y9g9-xsxs`), Fire Occurrence, Workers' Comp Claims (`p8ud-dzhp`) |
+| **lat / long / point** | Fire Occurrence, Library Directory (`6x9d-idz4`), businesses (via geocoding) |
+
+### Example Cross-Dataset Questions
+
+#### Geographic / County-Level
+
+- **Business activity vs. workplace safety:** Which counties have the most new business registrations but the fewest accepted workers' comp claims per employee? *(Active Businesses + Workers' Comp Claims by county/year)*
+- **Library funding vs. civic engagement:** How does library funding per capita compare to voter registration rates by county? *(Library Statistics + Voter Registration by county)*
+- **Consumer complaint density:** Which counties have the most consumer complaints relative to active businesses? *(Consumer Complaints + Active Businesses by city/zip)*
+
+#### Temporal / Trend Analysis
+
+- **Wildfire economic impact:** Did business registrations decline in counties hit by large wildfires, and how quickly did they recover? *(Fire Occurrence + Active Businesses by county + year)*
+- **Public-sector pay vs. workplace claims:** How have state agency salary trends tracked against workers' comp claim rates over the past decade? *(Agency Salaries + Workers' Comp Claims by fiscal year)*
+- **Civic and economic growth correlation:** Do counties with rising voter registration also see rising business formation? *(Voter Registration + Active Businesses over time)*
+
+#### Workforce & Economy
+
+- **Contractor density vs. employer coverage:** What's the relationship between the number of licensed contractors and the workers' comp employer count by county? *(CCB Active Licenses + Workers' Comp Employers by county)*
+- **State spending vs. nonprofit presence:** How do state agency expenditures compare to the number of active nonprofits in each county? *(Agency Expenditures + Active Nonprofits by county)*
+
+#### Community & Public Safety
+
+- **Library services as a community health indicator:** Are counties with more library programs and higher circulation also counties with fewer consumer complaints per business? *(Library Statistics + Consumer Complaints + Active Businesses by county)*
+- **Government cost per voter:** Which counties spend the most on state salaries per registered voter? *(Agency Salaries + Voter Registration by county)*
+
+### Richest Multi-Dataset Combination
+
+A **county-level economic health dashboard** combining business formation rates, workers' comp claims, state expenditures, library usage, and voter registration into a single county profile. All five datasets share `county` as a join key and have temporal dimensions that support year-over-year trending.
+
+---
+
 ## Key Implementation Notes for MCP Server
 
 1. **No auth required for reads** - all datasets are public, app tokens only needed for higher rate limits

@@ -7,6 +7,7 @@ export const DatasetIdSchema = z
 
 // Tool result shape returned by all handlers
 export interface ToolResult {
+  [x: string]: unknown;
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
 }
