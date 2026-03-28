@@ -53,7 +53,16 @@ Searches the Oregon data catalog by keyword and/or category.
 | `query` | string | no | Keyword search term |
 | `category` | string | no | Category filter (e.g., "Business", "Public Safety") |
 
-At least one of `query` or `category` must be provided.
+At least one of `query` or `category` must be provided. Enforced by Zod validation — returns `INVALID_INPUT` with message "At least one of query or category must be provided."
+
+The `category` input param maps to the `categories` query parameter in the Catalog API. Category matching is case-sensitive — the agent must match Socrata's exact casing (e.g., "Business", "Revenue & Expense", "Public Safety").
+
+**Field mapping from Catalog API response:**
+- `result.resource.id` → `id`
+- `result.resource.name` → `name`
+- `result.resource.description` → `description`
+- `result.classification.domain_category` → `category`
+- `result.resource.updatedAt` → `updatedAt`
 
 **Output:**
 ```json
@@ -82,7 +91,9 @@ Returns metadata, column definitions, and sample rows for a specific dataset.
 **Input:**
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `datasetId` | string | yes | 4x4 dataset identifier (e.g., `tckn-sxa6`) |
+| `datasetId` | string | yes | 4x4 dataset identifier (e.g., `tckn-sxa6`). Validated by regex: `^[a-z0-9]{4}-[a-z0-9]{4}$` |
+
+The `columns` array is sourced from the metadata API's `columns[].dataTypeName` (mapped to `type`) and `columns[].fieldName`. System/computed columns (prefixed with `:` or `:@`) are excluded from the output.
 
 **Output:**
 ```json
@@ -111,13 +122,13 @@ Executes a SoQL query against a specific dataset.
 **Input:**
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `datasetId` | string | yes | 4x4 dataset identifier |
+| `datasetId` | string | yes | 4x4 dataset identifier. Validated by regex: `^[a-z0-9]{4}-[a-z0-9]{4}$` |
 | `select` | string | no | Columns/expressions to return |
 | `where` | string | no | Filter expression |
 | `group` | string | no | Group by columns |
 | `having` | string | no | Filter on aggregated values |
 | `order` | string | no | Sort order |
-| `limit` | number | no | Max rows (default 100, max 1000) |
+| `limit` | number | no | Max rows (default 100, max 1000). Intentionally lower than SODA's 1000 default to keep responses within LLM context limits. |
 | `offset` | number | no | Pagination offset |
 | `search` | string | no | Full-text search (maps to `$q`) |
 
@@ -128,6 +139,8 @@ Executes a SoQL query against a specific dataset.
   "metadata": { "rowsReturned": 10, "query": "$select=...&$where=...&$limit=10" }
 }
 ```
+
+The `metadata.query` field contains the query parameter string (without the base URL) that was sent to the SODA API, for debugging purposes.
 
 **Output (empty results):**
 ```json
@@ -162,6 +175,8 @@ Executes a SoQL query against a specific dataset.
 - All requests use Node's built-in `fetch`
 - HTTPS only
 - App token injected via `X-App-Token` header when available
+- 30-second request timeout via `AbortController` — returns `NETWORK_ERROR` on timeout
+- No automatic retries — errors are returned immediately to the agent, which can decide whether to retry
 
 ## Error Handling
 
@@ -184,7 +199,9 @@ All errors returned as structured MCP tool responses (never thrown exceptions th
 | Condition | Code | Recoverable | Suggestion |
 |-----------|------|-------------|------------|
 | Zod validation failure | `INVALID_INPUT` | true | Describes what's wrong with the input |
+| HTTP 202 | `PROCESSING` | true | "Query is still processing — try again in a few seconds" |
 | HTTP 400 | `BAD_QUERY` | true | "Check your SoQL syntax. Details: {API message}" |
+| HTTP 403 | `ACCESS_DENIED` | false | "This dataset may be private or restricted" |
 | HTTP 404 | `DATASET_NOT_FOUND` | false | "Try search_datasets to find the correct dataset ID" |
 | HTTP 429 | `RATE_LIMITED` | true | "Rate limited — consider adding a SOCRATA_API_KEY for higher limits" |
 | HTTP 500 | `SERVER_ERROR` | true | "Socrata server error — try again shortly" |
