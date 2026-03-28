@@ -5,6 +5,7 @@ import { SocrataClient } from "./lib/socrata-client.js";
 import { handleSearchDatasets } from "./tools/search-datasets.js";
 import { handleGetDatasetSchema } from "./tools/get-dataset-schema.js";
 import { handleQueryDataset } from "./tools/query-dataset.js";
+import { handleValidateSoql } from "./tools/validate-soql.js";
 
 const appToken = process.env.SOCRATA_API_KEY;
 const client = new SocrataClient(appToken);
@@ -107,6 +108,37 @@ server.registerTool(
       offset,
       search,
     });
+  }
+);
+
+server.registerTool(
+  "validate_soql",
+  {
+    title: "Validate SoQL Query",
+    description:
+      "Validate SoQL query parameters before executing. Returns diagnostics for syntax errors " +
+      "with suggestions for fixes. Use this to check your query before calling query_dataset.",
+    inputSchema: {
+      select: z.string().optional().describe("SoQL $select clause"),
+      where: z.string().optional().describe("SoQL $where clause"),
+      order: z.string().optional().describe("SoQL $order clause"),
+      group: z.string().optional().describe("SoQL $group clause"),
+      having: z.string().optional().describe("SoQL $having clause"),
+      limit: z.string().optional().describe("SoQL $limit value"),
+      offset: z.string().optional().describe("SoQL $offset value"),
+      q: z.string().optional().describe("Full-text search query"),
+    },
+  },
+  async (params) => {
+    const result = handleValidateSoql(params);
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    };
   }
 );
 
