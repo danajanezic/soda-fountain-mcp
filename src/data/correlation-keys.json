@@ -1,0 +1,216 @@
+{
+  "version": "1.0",
+  "domains": {
+    "data.oregon.gov": { "state": "OR", "name": "Oregon Open Data" },
+    "data.wa.gov": { "state": "WA", "name": "Washington Open Data" },
+    "data.ny.gov": { "state": "NY", "name": "New York Open Data" },
+    "data.ct.gov": { "state": "CT", "name": "Connecticut Open Data" },
+    "data.texas.gov": { "state": "TX", "name": "Texas Open Data" },
+    "data.nj.gov": { "state": "NJ", "name": "New Jersey Open Data" }
+  },
+  "keys": [
+    {
+      "key": "county",
+      "type": "geographic",
+      "description": "County name within a US state",
+      "crossStateJoin": false,
+      "normalizations": ["upper()", "trim whitespace", "strip ' County' suffix"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "fbwv-q84y", "name": "Fire Occurrence", "column": "county", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "6x9d-idz4", "name": "Library Directory", "column": "county", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "8h6y-5uec", "name": "Voter Registration", "column": "county", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "q9zj-c8r2", "name": "Workers' Comp Employers", "column": "county_code", "columnType": "text", "columnNote": "Code not name" },
+        { "domain": "data.oregon.gov", "id": "g77e-6bhs", "name": "CCB Licenses", "column": "county_name", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "cu5x-ppiq", "name": "Long-Term Care Complaints", "column": "facility_county", "columnType": "text" },
+        { "domain": "data.ct.gov", "id": "kf75-36tt", "name": "Public Libraries", "column": "county", "columnType": "text" },
+        { "domain": "data.texas.gov", "id": "2zpi-yjjs", "name": "Expenditures by County", "column": "county", "columnType": "text" },
+        { "domain": "data.texas.gov", "id": "cxnx-7tf4", "name": "PUC Complaints", "column": "county", "columnType": "text" },
+        { "domain": "data.ny.gov", "id": "jshw-gkgu", "name": "Workers' Comp Claims", "column": "injured_in_county_name", "columnType": "text" }
+      ]
+    },
+    {
+      "key": "city",
+      "type": "geographic",
+      "description": "City name",
+      "crossStateJoin": false,
+      "normalizations": ["upper()", "trim whitespace"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "tckn-sxa6", "name": "Active Businesses", "column": "city", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "2ix7-8hwk", "name": "Consumer Complaints", "column": "city", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "6x9d-idz4", "name": "Library Directory", "column": "physical_city", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "cu5x-ppiq", "name": "Long-Term Care Complaints", "column": "facility_city", "columnType": "text" },
+        { "domain": "data.wa.gov", "id": "gpri-47xz", "name": "Consumer Complaints", "column": "businesscity", "columnType": "text" },
+        { "domain": "data.ct.gov", "id": "n7gp-d28j", "name": "Business Registry", "column": "billingcity", "columnType": "text" },
+        { "domain": "data.texas.gov", "id": "c4xz-httr", "name": "Workers' Comp Subscribers", "column": "insured_employer_city", "columnType": "text" },
+        { "domain": "data.texas.gov", "id": "cxnx-7tf4", "name": "PUC Complaints", "column": "custcity", "columnType": "text" },
+        { "domain": "data.nj.gov", "id": "tfhb-8beb", "name": "SAVI Certified Businesses", "column": "business_city", "columnType": "text" }
+      ]
+    },
+    {
+      "key": "zip",
+      "type": "geographic",
+      "description": "US ZIP code (5-digit)",
+      "crossStateJoin": true,
+      "normalizations": ["truncate to 5 digits", "trim whitespace"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "tckn-sxa6", "name": "Active Businesses", "column": "zip", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "2ix7-8hwk", "name": "Consumer Complaints", "column": "zip", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "6x9d-idz4", "name": "Library Directory", "column": "physical_zip", "columnType": "text" },
+        { "domain": "data.wa.gov", "id": "gpri-47xz", "name": "Consumer Complaints", "column": "businesszip", "columnType": "text" },
+        { "domain": "data.ct.gov", "id": "n7gp-d28j", "name": "Business Registry", "column": "billingpostalcode", "columnType": "text" },
+        { "domain": "data.texas.gov", "id": "c4xz-httr", "name": "Workers' Comp Subscribers", "column": "insured_employer_zip", "columnType": "text" },
+        { "domain": "data.texas.gov", "id": "cxnx-7tf4", "name": "PUC Complaints", "column": "custzip", "columnType": "text" },
+        { "domain": "data.nj.gov", "id": "tfhb-8beb", "name": "SAVI Certified Businesses", "column": "business_zip", "columnType": "text" }
+      ]
+    },
+    {
+      "key": "lat_long",
+      "type": "geographic",
+      "description": "Geographic coordinates (latitude/longitude or GeoJSON point)",
+      "crossStateJoin": true,
+      "normalizations": ["normalize to GeoJSON point format", "legacy location type uses {latitude, longitude}, modern point type uses GeoJSON"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "fbwv-q84y", "name": "Fire Occurrence", "column": "latlongdd", "columnType": "point" },
+        { "domain": "data.oregon.gov", "id": "6x9d-idz4", "name": "Library Directory", "column": "geocodedaddress", "columnType": "point" },
+        { "domain": "data.wa.gov", "id": "gpri-47xz", "name": "Consumer Complaints", "column": "geocode", "columnType": "location", "columnNote": "Legacy location type, not GeoJSON point" }
+      ]
+    },
+    {
+      "key": "fiscal_year",
+      "type": "temporal",
+      "description": "Fiscal year (boundaries differ by state: OR Jul-Jun, TX Sep-Aug, NY Apr-Mar, NJ Jul-Jun)",
+      "crossStateJoin": true,
+      "normalizations": ["cast to integer for comparison", "NJ and WA pivot years into column names — requires client-side unpivoting"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "4cmg-5yp4", "name": "Agency Salaries", "column": "fiscal_year", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "y9g9-xsxs", "name": "Agency Expenditures", "column": "fiscal_year", "columnType": "number" },
+        { "domain": "data.nj.gov", "id": "apet-rp2i", "name": "Agency Expenditures", "column": "budget_fiscal_year", "columnType": "number" },
+        { "domain": "data.nj.gov", "id": "whpi-savb", "name": "Multi-Year Expenditures", "column": "fy_2003", "columnType": "number", "columnNote": "Pivoted: years are column names (fy_2003 through fy_2024), not row values" },
+        { "domain": "data.wa.gov", "id": "y3ds-rkew", "name": "Salaries 2010-2013", "column": "salary2010", "columnType": "number", "columnNote": "Pivoted: years are column names (salary2010 through salary2013), not row values" }
+      ]
+    },
+    {
+      "key": "calendar_year",
+      "type": "temporal",
+      "description": "Calendar year (cleanest cross-state temporal join)",
+      "crossStateJoin": true,
+      "normalizations": ["extract from calendar_date via date_extract_y()", "cast text year columns to integer", "calendar_date year columns stored as full timestamp e.g. 2020-01-01T00:00:00.000"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "p8ud-dzhp", "name": "Workers' Comp Claims", "column": "year", "columnType": "calendar_date", "columnNote": "Needs date_extract_y() — stored as full timestamp" },
+        { "domain": "data.oregon.gov", "id": "fbwv-q84y", "name": "Fire Occurrence", "column": "fireyear", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "xc4e-hg3n", "name": "OSHA", "column": "year", "columnType": "number" },
+        { "domain": "data.ct.gov", "id": "kf75-36tt", "name": "Public Libraries", "column": "fiscal_year", "columnType": "number", "columnNote": "CT library fiscal year aligns with calendar year" },
+        { "domain": "data.ny.gov", "id": "jshw-gkgu", "name": "Workers' Comp Claims", "column": "accident_date", "columnType": "calendar_date", "columnNote": "Extract year via date_extract_y(accident_date)" }
+      ]
+    },
+    {
+      "key": "date",
+      "type": "temporal",
+      "description": "Full date (ISO 8601 calendar_date)",
+      "crossStateJoin": true,
+      "normalizations": ["use date_trunc_y() or date_trunc_ym() for aggregation", "use date_extract_y() for year grouping"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "fbwv-q84y", "name": "Fire Occurrence", "column": "ign_datetime", "columnType": "calendar_date" },
+        { "domain": "data.oregon.gov", "id": "2ix7-8hwk", "name": "Consumer Complaints", "column": "date_open", "columnType": "calendar_date" },
+        { "domain": "data.oregon.gov", "id": "cu5x-ppiq", "name": "Long-Term Care Complaints", "column": "date_opened", "columnType": "calendar_date" },
+        { "domain": "data.ny.gov", "id": "jshw-gkgu", "name": "Workers' Comp Claims", "column": "accident_date", "columnType": "calendar_date" },
+        { "domain": "data.texas.gov", "id": "cxnx-7tf4", "name": "PUC Complaints", "column": "datereceived", "columnType": "calendar_date" },
+        { "domain": "data.texas.gov", "id": "c4xz-httr", "name": "Workers' Comp Subscribers", "column": "policy_effective_date", "columnType": "calendar_date" },
+        { "domain": "data.nj.gov", "id": "apet-rp2i", "name": "Agency Expenditures", "column": "fy_through_date", "columnType": "calendar_date" }
+      ]
+    },
+    {
+      "key": "business_name",
+      "type": "entity",
+      "description": "Business or organization name (column name varies per dataset)",
+      "crossStateJoin": false,
+      "normalizations": ["upper()", "trim whitespace", "strip suffixes: LLC, INC, CORP, L.L.C.", "fuzzy match for DBA vs legal name"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "tckn-sxa6", "name": "Active Businesses", "column": "business_name", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "q9zj-c8r2", "name": "Workers' Comp Employers", "column": "legal_business_name", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "2ix7-8hwk", "name": "Consumer Complaints", "column": "respondent", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "g77e-6bhs", "name": "CCB Licenses", "column": "full_name", "columnType": "text" },
+        { "domain": "data.ct.gov", "id": "n7gp-d28j", "name": "Business Registry", "column": "name", "columnType": "text" },
+        { "domain": "data.texas.gov", "id": "c4xz-httr", "name": "Workers' Comp Subscribers", "column": "insured_employer_name", "columnType": "text" },
+        { "domain": "data.texas.gov", "id": "cxnx-7tf4", "name": "PUC Complaints", "column": "company", "columnType": "text" },
+        { "domain": "data.ny.gov", "id": "jshw-gkgu", "name": "Workers' Comp Claims", "column": "carrier_name", "columnType": "text", "columnNote": "This is the insurer, not the employer" },
+        { "domain": "data.nj.gov", "id": "tfhb-8beb", "name": "SAVI Certified Businesses", "column": "business_name", "columnType": "text" }
+      ]
+    },
+    {
+      "key": "entity_type",
+      "type": "entity",
+      "description": "Business entity type (Corporation, LLC, Nonprofit, etc.)",
+      "crossStateJoin": true,
+      "normalizations": ["map state-specific values to canonical set", "NJ certification_type is SBE/MBE/WBE designations, not corporate form"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "tckn-sxa6", "name": "Active Businesses", "column": "entity_type", "columnType": "text" },
+        { "domain": "data.ct.gov", "id": "n7gp-d28j", "name": "Business Registry", "column": "business_type", "columnType": "text" },
+        { "domain": "data.nj.gov", "id": "tfhb-8beb", "name": "SAVI Certified Businesses", "column": "certification_type", "columnType": "text", "columnNote": "Certification class (SBE/MBE/WBE), not corporate form" }
+      ]
+    },
+    {
+      "key": "naics",
+      "type": "entity",
+      "description": "NAICS industry code (federal standard, cleanest cross-state industry key)",
+      "crossStateJoin": true,
+      "normalizations": ["extract numeric code only", "TX combines SIC and NAICS in one field", "CT has code + sub-code split", "hierarchical: 2-digit=sector, 4-digit=industry group, 6-digit=specific"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "q9zj-c8r2", "name": "Workers' Comp Employers", "column": "naics", "columnType": "text" },
+        { "domain": "data.ct.gov", "id": "n7gp-d28j", "name": "Business Registry", "column": "naics_code", "columnType": "text" },
+        { "domain": "data.texas.gov", "id": "c4xz-httr", "name": "Workers' Comp Subscribers", "column": "sic_code_naics_code", "columnType": "text", "columnNote": "Combined SIC/NAICS field" },
+        { "domain": "data.ny.gov", "id": "jshw-gkgu", "name": "Workers' Comp Claims", "column": "industry_code", "columnType": "text", "columnNote": "May be NAICS or OIICS — verify before joining" }
+      ]
+    },
+    {
+      "key": "agency",
+      "type": "fiscal",
+      "description": "State government agency name",
+      "crossStateJoin": false,
+      "normalizations": ["use text name columns, not numeric codes", "naming inconsistent even within a single state"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "4cmg-5yp4", "name": "Agency Salaries", "column": "agency_title", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "y9g9-xsxs", "name": "Agency Expenditures", "column": "agency_1", "columnType": "text" },
+        { "domain": "data.nj.gov", "id": "apet-rp2i", "name": "Agency Expenditures", "column": "ibno_agency", "columnType": "text" },
+        { "domain": "data.nj.gov", "id": "whpi-savb", "name": "Multi-Year Expenditures", "column": "ibno_agency", "columnType": "text" },
+        { "domain": "data.wa.gov", "id": "y3ds-rkew", "name": "Salaries", "column": "agencytitle", "columnType": "text" }
+      ]
+    },
+    {
+      "key": "expenditure_category",
+      "type": "fiscal",
+      "description": "Budget/expenditure classification",
+      "crossStateJoin": false,
+      "normalizations": ["map to high-level canonical categories (personnel, contracts, capital)", "OR uses numeric codes with _1 suffix for labels"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "y9g9-xsxs", "name": "Agency Expenditures", "column": "expend_class_1", "columnType": "text" },
+        { "domain": "data.nj.gov", "id": "apet-rp2i", "name": "Agency Expenditures", "column": "expenditure_category", "columnType": "text" },
+        { "domain": "data.nj.gov", "id": "whpi-savb", "name": "Multi-Year Expenditures", "column": "expenditure_category", "columnType": "text" }
+      ]
+    },
+    {
+      "key": "complaint_status",
+      "type": "enforcement",
+      "description": "Status or disposition of a complaint/claim",
+      "crossStateJoin": false,
+      "normalizations": ["map to canonical set: open, closed, resolved, denied", "OR uses status, OR long-term care uses disposition, TX uses staffdetermination, NY uses current_claim_status"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "2ix7-8hwk", "name": "Consumer Complaints", "column": "status", "columnType": "text" },
+        { "domain": "data.oregon.gov", "id": "cu5x-ppiq", "name": "Long-Term Care Complaints", "column": "disposition", "columnType": "text" },
+        { "domain": "data.texas.gov", "id": "cxnx-7tf4", "name": "PUC Complaints", "column": "staffdetermination", "columnType": "text" },
+        { "domain": "data.ny.gov", "id": "jshw-gkgu", "name": "Workers' Comp Claims", "column": "current_claim_status", "columnType": "text" }
+      ]
+    },
+    {
+      "key": "complaint_category",
+      "type": "enforcement",
+      "description": "Type or category of complaint",
+      "crossStateJoin": false,
+      "normalizations": ["no standard taxonomy — useful for intra-state grouping only"],
+      "datasets": [
+        { "domain": "data.oregon.gov", "id": "2ix7-8hwk", "name": "Consumer Complaints", "column": "business_type", "columnType": "text" },
+        { "domain": "data.texas.gov", "id": "cxnx-7tf4", "name": "PUC Complaints", "column": "category", "columnType": "text" }
+      ]
+    }
+  ]
+}
