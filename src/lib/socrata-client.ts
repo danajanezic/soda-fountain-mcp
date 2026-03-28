@@ -2,6 +2,8 @@ import type {
   SocrataError,
   DatasetSummary,
   SearchResponse,
+  DatasetSchema,
+  ColumnDef,
 } from "./types.js";
 
 const CATALOG_BASE = "https://api.us.socrata.com/api/catalog/v1";
@@ -147,6 +149,45 @@ export class SocrataClient {
         totalResults: data.resultSetSize ?? 0,
         returned: results.length,
       },
+    };
+  }
+
+  async getMetadata(datasetId: string): Promise<DatasetSchema> {
+    // Fetch metadata
+    const metaUrl = `${DATA_BASE}/api/views/${datasetId}.json`;
+    const metaResponse = await this.fetchWithTimeout(metaUrl);
+
+    if (!metaResponse.ok) {
+      const body = await metaResponse.text();
+      throw this.handleHttpError(metaResponse.status, body);
+    }
+
+    const meta = await metaResponse.json();
+
+    // Filter out system/computed columns (prefixed with : or :@)
+    const columns: ColumnDef[] = (meta.columns || [])
+      .filter((c: Record<string, string>) => !c.fieldName.startsWith(":"))
+      .map((c: Record<string, string>) => ({
+        fieldName: c.fieldName,
+        type: c.dataTypeName,
+        name: c.name,
+      }));
+
+    // Fetch sample rows
+    const sampleUrl = `${DATA_BASE}/resource/${datasetId}.json?$limit=3`;
+    const sampleResponse = await this.fetchWithTimeout(sampleUrl);
+
+    let sampleRows: Record<string, unknown>[] = [];
+    if (sampleResponse.ok) {
+      sampleRows = await sampleResponse.json();
+    }
+
+    return {
+      name: meta.name ?? "",
+      description: meta.description ?? "",
+      category: meta.category ?? "",
+      columns,
+      sampleRows,
     };
   }
 }

@@ -111,4 +111,73 @@ describe("SocrataClient", () => {
       expect(headers["X-App-Token"]).toBeUndefined();
     });
   });
+
+  describe("getMetadata", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("fetches metadata and sample rows, filters system columns", async () => {
+      const metadataResponse = {
+        name: "Active Businesses",
+        description: "All active businesses",
+        category: "business",
+        columns: [
+          { fieldName: "business_name", dataTypeName: "text", name: "Business Name" },
+          { fieldName: "city", dataTypeName: "text", name: "City" },
+          { fieldName: ":id", dataTypeName: "meta_data", name: "ID" },
+          { fieldName: ":@computed_region_abc", dataTypeName: "number", name: "Region" },
+        ],
+      };
+
+      const sampleResponse = [
+        { business_name: "ACME", city: "PORTLAND" },
+        { business_name: "BETA", city: "SALEM" },
+      ];
+
+      vi.stubGlobal(
+        "fetch",
+        vi.fn()
+          .mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(metadataResponse),
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(sampleResponse),
+          })
+      );
+
+      const client = new SocrataClient();
+      const result = await client.getMetadata("tckn-sxa6");
+
+      expect(result.name).toBe("Active Businesses");
+      expect(result.columns).toHaveLength(2);
+      expect(result.columns[0]).toEqual({
+        fieldName: "business_name",
+        type: "text",
+        name: "Business Name",
+      });
+      expect(result.sampleRows).toHaveLength(2);
+    });
+
+    it("returns 404 error for invalid dataset", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 404,
+          text: () => Promise.resolve('{"message": "Not found"}'),
+        })
+      );
+
+      const client = new SocrataClient();
+      await expect(client.getMetadata("xxxx-xxxx")).rejects.toMatchObject({
+        error: true,
+        code: "DATASET_NOT_FOUND",
+      });
+    });
+  });
 });
