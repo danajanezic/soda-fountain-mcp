@@ -41,9 +41,23 @@ const KNOWN_DOMAINS: DomainInfo[] = [
 
 export class SocrataClient {
   private appToken?: string;
+  private schemaCache = new Map<string, { columns: ColumnDef[]; fetchedAt: number }>();
+  private static SCHEMA_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
   constructor(appToken?: string) {
     this.appToken = appToken;
+  }
+
+  /** Get column definitions for a dataset, with caching. */
+  async getColumns(domain: string, datasetId: string): Promise<ColumnDef[]> {
+    const key = `${domain}/${datasetId}`;
+    const cached = this.schemaCache.get(key);
+    if (cached && Date.now() - cached.fetchedAt < SocrataClient.SCHEMA_TTL_MS) {
+      return cached.columns;
+    }
+    const schema = await this.getMetadata(domain, datasetId);
+    this.schemaCache.set(key, { columns: schema.columns, fetchedAt: Date.now() });
+    return schema.columns;
   }
 
   private buildHeaders(): Record<string, string> {

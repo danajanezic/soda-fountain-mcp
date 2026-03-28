@@ -1,6 +1,7 @@
 import type { SocrataClient } from "../lib/socrata-client.js";
 import type { SocrataError, SoqlParams, ToolResult } from "../lib/types.js";
 import { validate } from "../lib/validator.js";
+import { validateWithSchema } from "../lib/schema-validator.js";
 import type { Diagnostic } from "../lib/types.js";
 
 function getWarnings(params: {
@@ -95,6 +96,46 @@ export async function handleQueryDataset(
   }
 ): Promise<ToolResult> {
   try {
+    // ── Pre-flight: schema-aware validation ──
+    // Catches LLM mistakes (wrong columns, SQL habits) BEFORE hitting the API
+    try {
+      const columns = await client.getColumns(params.domain, params.datasetId);
+      const schemaErrors = validateWithSchema(
+        {
+          select: params.select,
+          where: params.where,
+          order: params.order,
+          group: params.group,
+          having: params.having,
+          search: params.search,
+        },
+        columns
+      );
+
+      const errors = schemaErrors.filter((d) => d.severity === "error");
+      if (errors.length > 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                error: true,
+                code: "QUERY_VALIDATION_FAILED",
+                message: `Query has ${errors.length} error(s) that would fail. Fix these before querying.`,
+                recoverable: true,
+                suggestion: errors[0].suggestion ?? "Check column names and SoQL syntax",
+                diagnostics: schemaErrors,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    } catch {
+      // Schema fetch failed — proceed without validation (don't block queries)
+    }
+
+    // ── Execute query ──
     const soqlParams: SoqlParams = {
       select: params.select,
       where: params.where,
