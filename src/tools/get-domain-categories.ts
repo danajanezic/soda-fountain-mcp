@@ -1,14 +1,14 @@
 import type { SocrataClient } from "../lib/socrata-client.js";
 import type { SocrataError, ToolResult } from "../lib/types.js";
 
-export async function handleGetDatasetSchema(
+export async function handleGetDomainCategories(
   client: SocrataClient,
-  params: { domain: string; datasetId: string }
+  params: { domain: string }
 ): Promise<ToolResult> {
   try {
-    const schema = await client.getMetadata(params.domain, params.datasetId);
+    const response = await client.getDomainCategories(params.domain);
     return {
-      content: [{ type: "text", text: JSON.stringify(schema, null, 2) }],
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
     };
   } catch (err) {
     const socrataErr = err as SocrataError;
@@ -27,7 +27,7 @@ export async function handleGetDatasetSchema(
             code: "NETWORK_ERROR",
             message: `Could not reach ${params.domain} — ${String(err)}`,
             recoverable: true,
-            suggestion: "Check your network connection",
+            suggestion: "Check the domain name and your network connection",
           }, null, 2),
         },
       ],

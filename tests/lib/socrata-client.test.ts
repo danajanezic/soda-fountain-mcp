@@ -33,7 +33,7 @@ describe("SocrataClient", () => {
       );
 
       const client = new SocrataClient();
-      const result = await client.searchCatalog({ query: "fire" });
+      const result = await client.searchCatalog({ domain: "data.oregon.gov", query: "fire" });
 
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining("q=fire"),
@@ -45,6 +45,7 @@ describe("SocrataClient", () => {
         name: "ODF Fire Data",
         description: "Fire data",
         category: "Natural Resources",
+        domain: "data.oregon.gov",
         updatedAt: "2023-01-01T00:00:00.000Z",
       });
       expect(result.metadata.totalResults).toBe(1);
@@ -61,7 +62,7 @@ describe("SocrataClient", () => {
       );
 
       const client = new SocrataClient();
-      await client.searchCatalog({ category: "Business" });
+      await client.searchCatalog({ domain: "data.oregon.gov", category: "Business" });
 
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining("categories=Business"),
@@ -80,7 +81,7 @@ describe("SocrataClient", () => {
       );
 
       const client = new SocrataClient("test-token-123");
-      await client.searchCatalog({ query: "test" });
+      await client.searchCatalog({ domain: "data.oregon.gov", query: "test" });
 
       expect(fetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -103,7 +104,7 @@ describe("SocrataClient", () => {
       );
 
       const client = new SocrataClient();
-      await client.searchCatalog({ query: "test" });
+      await client.searchCatalog({ domain: "data.oregon.gov", query: "test" });
 
       const callArgs = vi.mocked(fetch).mock.calls[0];
       const options = callArgs[1] as RequestInit;
@@ -128,7 +129,7 @@ describe("SocrataClient", () => {
       );
 
       const client = new SocrataClient();
-      const result = await client.queryDataset("tckn-sxa6", {
+      const result = await client.queryDataset("data.oregon.gov", "tckn-sxa6", {
         select: "city, count(*)",
         where: "state='OR'",
         group: "city",
@@ -160,7 +161,7 @@ describe("SocrataClient", () => {
       );
 
       const client = new SocrataClient();
-      await client.queryDataset("tckn-sxa6", {
+      await client.queryDataset("data.oregon.gov", "tckn-sxa6", {
         search: "coffee",
         limit: 100,
         offset: 0,
@@ -181,7 +182,7 @@ describe("SocrataClient", () => {
       );
 
       const client = new SocrataClient();
-      const result = await client.queryDataset("tckn-sxa6", {
+      const result = await client.queryDataset("data.oregon.gov", "tckn-sxa6", {
         limit: 100,
         offset: 0,
       });
@@ -202,7 +203,7 @@ describe("SocrataClient", () => {
 
       const client = new SocrataClient();
       await expect(
-        client.queryDataset("tckn-sxa6", { limit: 100, offset: 0 })
+        client.queryDataset("data.oregon.gov", "tckn-sxa6", { limit: 100, offset: 0 })
       ).rejects.toMatchObject({
         error: true,
         code: "BAD_QUERY",
@@ -249,7 +250,7 @@ describe("SocrataClient", () => {
       );
 
       const client = new SocrataClient();
-      const result = await client.getMetadata("tckn-sxa6");
+      const result = await client.getMetadata("data.oregon.gov", "tckn-sxa6");
 
       expect(result.name).toBe("Active Businesses");
       expect(result.columns).toHaveLength(2);
@@ -272,7 +273,7 @@ describe("SocrataClient", () => {
       );
 
       const client = new SocrataClient();
-      await expect(client.getMetadata("xxxx-xxxx")).rejects.toMatchObject({
+      await expect(client.getMetadata("data.oregon.gov", "xxxx-xxxx")).rejects.toMatchObject({
         error: true,
         code: "DATASET_NOT_FOUND",
       });

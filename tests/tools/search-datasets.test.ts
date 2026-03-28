@@ -26,10 +26,10 @@ function makeMockClient(overrides: Partial<SocrataClient> = {}): SocrataClient {
 describe("search_datasets handler", () => {
   it("returns formatted results on success", async () => {
     const client = makeMockClient();
-    const result = await handleSearchDatasets(client, { query: "business" });
+    const result = await handleSearchDatasets(client, { domain: "data.oregon.gov", query: "business" });
 
     expect(result.content[0].text).toContain("Active Businesses");
-    expect(client.searchCatalog).toHaveBeenCalledWith({ query: "business", category: undefined });
+    expect(client.searchCatalog).toHaveBeenCalledWith({ domain: "data.oregon.gov", query: "business", category: undefined });
   });
 
   it("returns structured error when client throws SocrataError", async () => {
@@ -43,7 +43,7 @@ describe("search_datasets handler", () => {
       }),
     });
 
-    const result = await handleSearchDatasets(client, { query: "test" });
+    const result = await handleSearchDatasets(client, { domain: "data.oregon.gov", query: "test" });
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("RATE_LIMITED");
   });
@@ -53,7 +53,7 @@ describe("search_datasets handler", () => {
       searchCatalog: vi.fn().mockRejectedValue(new TypeError("fetch failed")),
     });
 
-    const result = await handleSearchDatasets(client, { query: "test" });
+    const result = await handleSearchDatasets(client, { domain: "data.oregon.gov", query: "test" });
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("NETWORK_ERROR");
     expect(result.content[0].text).toContain("recoverable");
@@ -61,8 +61,8 @@ describe("search_datasets handler", () => {
 
   it("passes category-only searches to client", async () => {
     const client = makeMockClient();
-    await handleSearchDatasets(client, { category: "Business" });
+    await handleSearchDatasets(client, { domain: "data.oregon.gov", category: "Business" });
 
-    expect(client.searchCatalog).toHaveBeenCalledWith({ query: undefined, category: "Business" });
+    expect(client.searchCatalog).toHaveBeenCalledWith({ domain: "data.oregon.gov", query: undefined, category: "Business" });
   });
 });

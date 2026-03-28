@@ -6,11 +6,38 @@ import type {
   ColumnDef,
   SoqlParams,
   QueryResponse,
+  DomainInfo,
+  DomainCategoriesResponse,
 } from "./types.js";
 
 const CATALOG_BASE = "https://api.us.socrata.com/api/catalog/v1";
-const DATA_BASE = "https://data.oregon.gov";
 const TIMEOUT_MS = 30_000;
+
+/** Known Socrata domains with their dataset counts (periodically verified). */
+const KNOWN_DOMAINS: DomainInfo[] = [
+  { domain: "opendata.utah.gov", datasetCount: 6737 },
+  { domain: "data.cityofnewyork.us", datasetCount: 2391 },
+  { domain: "data.cdc.gov", datasetCount: 1106 },
+  { domain: "data.wa.gov", datasetCount: 1066 },
+  { domain: "data.ny.gov", datasetCount: 993 },
+  { domain: "data.cityofchicago.org", datasetCount: 906 },
+  { domain: "data.texas.gov", datasetCount: 795 },
+  { domain: "data.colorado.gov", datasetCount: 633 },
+  { domain: "data.ct.gov", datasetCount: 591 },
+  { domain: "data.oregon.gov", datasetCount: 494 },
+  { domain: "data.montgomerycountymd.gov", datasetCount: 457 },
+  { domain: "mydata.iowa.gov", datasetCount: 432 },
+  { domain: "data.pa.gov", datasetCount: 377 },
+  { domain: "data.lacity.org", datasetCount: 358 },
+  { domain: "data.kingcounty.gov", datasetCount: 265 },
+  { domain: "data.michigan.gov", datasetCount: 261 },
+  { domain: "data.mo.gov", datasetCount: 243 },
+  { domain: "data.kcmo.org", datasetCount: 201 },
+  { domain: "data.nola.gov", datasetCount: 199 },
+  { domain: "data.vermont.gov", datasetCount: 170 },
+  { domain: "data.delaware.gov", datasetCount: 168 },
+  { domain: "data.nj.gov", datasetCount: 113 },
+];
 
 export class SocrataClient {
   private appToken?: string;
@@ -87,7 +114,7 @@ export class SocrataClient {
         return {
           error: true,
           code: "DATASET_NOT_FOUND",
-          message: `Dataset not found — verify the dataset ID`,
+          message: `Dataset not found — verify the dataset ID and domain`,
           recoverable: false,
           suggestion: "Try search_datasets to find the correct dataset ID",
         };
@@ -110,13 +137,61 @@ export class SocrataClient {
     }
   }
 
+  /** List known Socrata domains. */
+  listDomains(): DomainInfo[] {
+    return KNOWN_DOMAINS;
+  }
+
+  /** Get categories and tags for a specific domain. */
+  async getDomainCategories(domain: string): Promise<DomainCategoriesResponse> {
+    const catUrl = new URL(`${CATALOG_BASE}/domain_categories`);
+    catUrl.searchParams.set("domains", domain);
+    catUrl.searchParams.set("search_context", domain);
+
+    const tagUrl = new URL(`${CATALOG_BASE}/domain_tags`);
+    tagUrl.searchParams.set("domains", domain);
+    tagUrl.searchParams.set("search_context", domain);
+
+    const [catResponse, tagResponse] = await Promise.all([
+      this.fetchWithTimeout(catUrl.toString()),
+      this.fetchWithTimeout(tagUrl.toString()),
+    ]);
+
+    let categories: Array<{ name: string; count: number }> = [];
+    if (catResponse.ok) {
+      const catData = await catResponse.json();
+      categories = (catData.results || []).map(
+        (r: { domain_category: string; count: number }) => ({
+          name: r.domain_category,
+          count: r.count,
+        })
+      );
+    }
+
+    let tags: Array<{ name: string; count: number }> = [];
+    if (tagResponse.ok) {
+      const tagData = await tagResponse.json();
+      const allTags: Array<{ name: string; count: number }> = (tagData.results || []).map(
+        (r: { domain_tag: string; count: number }) => ({
+          name: r.domain_tag,
+          count: r.count,
+        })
+      );
+      // Only return top 25 tags to keep response manageable
+      tags = allTags.slice(0, 25);
+    }
+
+    return { domain, categories, tags };
+  }
+
   async searchCatalog(params: {
+    domain: string;
     query?: string;
     category?: string;
   }): Promise<SearchResponse> {
     const url = new URL(CATALOG_BASE);
-    url.searchParams.set("domains", "data.oregon.gov");
-    url.searchParams.set("search_context", "data.oregon.gov");
+    url.searchParams.set("domains", params.domain);
+    url.searchParams.set("search_context", params.domain);
     url.searchParams.set("only", "datasets");
     url.searchParams.set("limit", "20");
 
@@ -142,6 +217,7 @@ export class SocrataClient {
         name: r.resource?.name ?? "",
         description: r.resource?.description ?? "",
         category: r.classification?.domain_category ?? "",
+        domain: params.domain,
         updatedAt: r.resource?.updatedAt ?? "",
       })
     );
@@ -156,6 +232,7 @@ export class SocrataClient {
   }
 
   async queryDataset(
+    domain: string,
     datasetId: string,
     params: SoqlParams
   ): Promise<QueryResponse> {
@@ -171,7 +248,7 @@ export class SocrataClient {
     if (params.offset > 0) queryParts.push(`$offset=${params.offset}`);
 
     const queryString = queryParts.join("&");
-    const urlStr = `${DATA_BASE}/resource/${datasetId}.json?${queryString}`;
+    const urlStr = `https://${domain}/resource/${datasetId}.json?${queryString}`;
 
     const response = await this.fetchWithTimeout(urlStr);
 
@@ -198,9 +275,8 @@ export class SocrataClient {
     return queryResponse;
   }
 
-  async getMetadata(datasetId: string): Promise<DatasetSchema> {
-    // Fetch metadata
-    const metaUrl = `${DATA_BASE}/api/views/${datasetId}.json`;
+  async getMetadata(domain: string, datasetId: string): Promise<DatasetSchema> {
+    const metaUrl = `https://${domain}/api/views/${datasetId}.json`;
     const metaResponse = await this.fetchWithTimeout(metaUrl);
 
     if (!metaResponse.ok) {
@@ -220,7 +296,7 @@ export class SocrataClient {
       }));
 
     // Fetch sample rows
-    const sampleUrl = `${DATA_BASE}/resource/${datasetId}.json?$limit=3`;
+    const sampleUrl = `https://${domain}/resource/${datasetId}.json?$limit=3`;
     const sampleResponse = await this.fetchWithTimeout(sampleUrl);
 
     let sampleRows: Record<string, unknown>[] = [];

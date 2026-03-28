@@ -23,11 +23,11 @@ function makeMockClient(overrides: Partial<SocrataClient> = {}): SocrataClient {
 describe("get_dataset_schema handler", () => {
   it("returns formatted schema on success", async () => {
     const client = makeMockClient();
-    const result = await handleGetDatasetSchema(client, { datasetId: "tckn-sxa6" });
+    const result = await handleGetDatasetSchema(client, { domain: "data.oregon.gov", datasetId: "tckn-sxa6" });
 
     expect(result.content[0].text).toContain("Active Businesses");
     expect(result.content[0].text).toContain("business_name");
-    expect(client.getMetadata).toHaveBeenCalledWith("tckn-sxa6");
+    expect(client.getMetadata).toHaveBeenCalledWith("data.oregon.gov", "tckn-sxa6");
   });
 
   it("returns structured error for 404", async () => {
@@ -41,7 +41,7 @@ describe("get_dataset_schema handler", () => {
       }),
     });
 
-    const result = await handleGetDatasetSchema(client, { datasetId: "xxxx-xxxx" });
+    const result = await handleGetDatasetSchema(client, { domain: "data.oregon.gov", datasetId: "xxxx-xxxx" });
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("DATASET_NOT_FOUND");
   });

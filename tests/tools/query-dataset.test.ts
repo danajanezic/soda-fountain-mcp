@@ -20,6 +20,7 @@ describe("query_dataset handler", () => {
   it("returns formatted results on success", async () => {
     const client = makeMockClient();
     const result = await handleQueryDataset(client, {
+      domain: "data.oregon.gov",
       datasetId: "tckn-sxa6",
       select: "city",
       limit: 100,
@@ -27,7 +28,7 @@ describe("query_dataset handler", () => {
     });
 
     expect(result.content[0].text).toContain("PORTLAND");
-    expect(client.queryDataset).toHaveBeenCalledWith("tckn-sxa6", {
+    expect(client.queryDataset).toHaveBeenCalledWith("data.oregon.gov", "tckn-sxa6", {
       select: "city",
       limit: 100,
       offset: 0,
@@ -44,6 +45,7 @@ describe("query_dataset handler", () => {
     });
 
     const result = await handleQueryDataset(client, {
+      domain: "data.oregon.gov",
       datasetId: "tckn-sxa6",
       limit: 100,
       offset: 0,
@@ -65,6 +67,7 @@ describe("query_dataset handler", () => {
     });
 
     const result = await handleQueryDataset(client, {
+      domain: "data.oregon.gov",
       datasetId: "tckn-sxa6",
       where: "bad syntax!!!",
       limit: 100,

@@ -34,7 +34,21 @@ export interface DatasetSummary {
   name: string;
   description: string;
   category: string;
+  domain: string;
   updatedAt: string;
+}
+
+// Domain info from catalog API
+export interface DomainInfo {
+  domain: string;
+  datasetCount: number;
+}
+
+// Domain categories response
+export interface DomainCategoriesResponse {
+  domain: string;
+  categories: Array<{ name: string; count: number }>;
+  tags: Array<{ name: string; count: number }>;
 }
 
 // Schema response

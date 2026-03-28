@@ -5,14 +5,14 @@ const client = new SocrataClient(process.env.SOCRATA_API_KEY);
 
 describe("integration: live Socrata API", () => {
   it("searchCatalog returns results for 'business'", async () => {
-    const result = await client.searchCatalog({ query: "business" });
+    const result = await client.searchCatalog({ domain: "data.oregon.gov", query: "business" });
     expect(result.results.length).toBeGreaterThan(0);
     expect(result.results[0].id).toMatch(/^[a-z0-9]{4}-[a-z0-9]{4}$/);
     expect(result.results[0].name).toBeTruthy();
   }, 15_000);
 
   it("getMetadata returns schema for tckn-sxa6", async () => {
-    const result = await client.getMetadata("tckn-sxa6");
+    const result = await client.getMetadata("data.oregon.gov", "tckn-sxa6");
     expect(result.name).toBe("Active Businesses - ALL");
     expect(result.columns.length).toBeGreaterThan(0);
     expect(result.columns[0].fieldName).toBeTruthy();
@@ -21,7 +21,7 @@ describe("integration: live Socrata API", () => {
   }, 15_000);
 
   it("queryDataset returns data for tckn-sxa6", async () => {
-    const result = await client.queryDataset("tckn-sxa6", {
+    const result = await client.queryDataset("data.oregon.gov", "tckn-sxa6", {
       select: "business_name, city",
       limit: 1,
       offset: 0,
@@ -32,7 +32,7 @@ describe("integration: live Socrata API", () => {
   }, 15_000);
 
   it("queryDataset with aggregation works", async () => {
-    const result = await client.queryDataset("tckn-sxa6", {
+    const result = await client.queryDataset("data.oregon.gov", "tckn-sxa6", {
       select: "city, count(*) as total",
       group: "city",
       order: "total DESC",

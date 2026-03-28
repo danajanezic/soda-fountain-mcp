@@ -3,10 +3,11 @@ import type { SocrataError, ToolResult } from "../lib/types.js";
 
 export async function handleSearchDatasets(
   client: SocrataClient,
-  params: { query?: string; category?: string }
+  params: { domain: string; query?: string; category?: string }
 ): Promise<ToolResult> {
   try {
     const response = await client.searchCatalog({
+      domain: params.domain,
       query: params.query,
       category: params.category,
     });
@@ -28,7 +29,7 @@ export async function handleSearchDatasets(
           text: JSON.stringify({
             error: true,
             code: "NETWORK_ERROR",
-            message: `Could not reach data.oregon.gov — ${String(err)}`,
+            message: `Could not reach ${params.domain} — ${String(err)}`,
             recoverable: true,
             suggestion: "Check your network connection",
           }, null, 2),

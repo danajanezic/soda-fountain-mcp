@@ -363,6 +363,22 @@ New UCC filings. Monthly.
 #### UCC Secured Parties List (`2kf7-zaud`)
 All current secured parties.
 
+#### Oregon OSHA Consultations, Inspections, Citations, Violations, and Penalties (`xc4e-hg3n`)
+Annual aggregate workplace safety data. Annual.
+| Column | Type |
+|--------|------|
+| year | number |
+| consultations_opened | number |
+| employees_affected | number |
+| sharp | number |
+| vpp | number |
+| inspections | number |
+| workers_covered_by_inspections | number |
+| percent_in_compliance | number |
+| citations | number |
+| violations | number |
+| penalties_millions | number |
+
 ### Revenue & Expense
 
 #### Salaries of State Agencies - Multi-Year Report (`4cmg-5yp4`)
@@ -441,6 +457,28 @@ Consumer complaints registered with DOJ (2017-2019).
 - 2021: `c43c-26hr`
 - 2022: `mcfd-xxua`
 - 2023: `4yri-t4vu`
+- 2024: `s838-3xb6`
+- 2025: `9jv6-t29w`
+- 2026: `xyak-25e9`
+
+#### Long-Term Care Ombudsman Complaint Data (`cu5x-ppiq`)
+Care facility complaint investigations (Oct 2021 – Sep 2023).
+| Column | Type |
+|--------|------|
+| case_id | text |
+| date_opened | calendar_date |
+| facility_type | text |
+| facility_city | text |
+| facility_county | text |
+| facility_state | text |
+| complainantant_role | text |
+| complaint_code, complaint_code_2 | text |
+| verify | checkbox |
+| disposition | text |
+| referral_agency | text |
+| date_closed | calendar_date |
+
+> **Data gap — Law enforcement & criminal justice:** The portal has no crime statistics, arrest records, corrections/incarceration data, police use-of-force data, or court records. Oregon's criminal justice data lives in separate systems (Oregon Judicial Dept., Dept. of Corrections, Oregon State Police) that are not published on data.oregon.gov. The closest regulatory/enforcement datasets available are Consumer Complaints (DOJ), OSHA Inspections (`xc4e-hg3n`), and Campaign Finance Penalties (`fku5-vh2b`).
 
 ### Natural Resources
 
@@ -498,6 +536,22 @@ Oregon voting districts mapped to precincts.
 
 #### Oregon Elections Calendar (`i8qc-cakg`)
 Important election dates and deadlines.
+
+#### Campaign Finance Penalty Notices (`fku5-vh2b`)
+Civil penalties for late/insufficient campaign finance filings. Monthly.
+| Column | Type |
+|--------|------|
+| final_order_issue_date | calendar_date |
+| month (violation month) | text |
+| l_i (violation type: Late or Insufficient) | text |
+| year (violation year) | number |
+| committee_id (ORESTAR filer ID) | number |
+| case (Elections Division case #) | text |
+| committee_name | text |
+| penalty_amount | number (USD) |
+| status | text |
+
+> **Note:** This is enforcement data only. Actual campaign finance transactions (contributions, expenditures, committee filings since 2007) live in the Secretary of State's **ORESTAR** system at `secure.sos.state.or.us/orestar/`, which has no public API — only a web search interface with Excel export. Cross-dataset questions involving campaign contributions are not possible through the SODA API.
 
 #### Bills Signed by Governor (multiple datasets)
 - Kitzhaber 2011: `4aug-3v37`

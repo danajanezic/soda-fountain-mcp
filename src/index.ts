@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { SocrataClient } from "./lib/socrata-client.js";
+import { handleListDomains } from "./tools/list-domains.js";
+import { handleGetDomainCategories } from "./tools/get-domain-categories.js";
 import { handleSearchDatasets } from "./tools/search-datasets.js";
 import { handleGetDatasetSchema } from "./tools/get-dataset-schema.js";
 import { handleQueryDataset } from "./tools/query-dataset.js";
@@ -11,26 +13,70 @@ const appToken = process.env.SOCRATA_API_KEY;
 const client = new SocrataClient(appToken);
 
 const server = new McpServer({
-  name: "oregon-open-data",
-  version: "1.0.0",
+  name: "socrata-open-data",
+  version: "2.0.0",
 });
+
+const domainSchema = z
+  .string()
+  .describe("Socrata domain (e.g., 'data.oregon.gov', 'data.wa.gov', 'data.ny.gov'). Use list_domains to discover available portals.");
+
+const datasetIdSchema = z
+  .string()
+  .regex(/^[a-z0-9]{4}-[a-z0-9]{4}$/, "Must be a 4x4 dataset ID (e.g., tckn-sxa6)")
+  .describe("Dataset identifier from search results (e.g., 'tckn-sxa6')");
+
+// ── Domain discovery ──
+
+server.registerTool(
+  "list_domains",
+  {
+    title: "List Socrata Data Portals",
+    description:
+      "List available Socrata open data portals — states, cities, counties, and federal agencies. " +
+      "Use this first to discover which portals are available before searching for datasets. " +
+      "Returns domain names and approximate dataset counts.",
+    inputSchema: {},
+  },
+  async () => {
+    return handleListDomains(client);
+  }
+);
+
+server.registerTool(
+  "get_domain_categories",
+  {
+    title: "Get Domain Categories & Tags",
+    description:
+      "Get the categories and popular tags for a specific Socrata portal. " +
+      "Use this after list_domains to understand what data a portal contains " +
+      "before searching. Categories are used to filter search_datasets results.",
+    inputSchema: {
+      domain: domainSchema,
+    },
+  },
+  async ({ domain }) => {
+    return handleGetDomainCategories(client, { domain });
+  }
+);
+
+// ── Dataset discovery & querying ──
 
 server.registerTool(
   "search_datasets",
   {
-    title: "Search Oregon Datasets",
+    title: "Search Datasets",
     description:
-      "Search Oregon's open data catalog (data.oregon.gov) by keyword and/or category. " +
-      "Returns dataset names, IDs, and descriptions. Use this first to discover which datasets " +
-      "are available before querying. Categories include: Business, Revenue & Expense, " +
-      "Health & Human Services, Administrative, Natural Resources, Public Safety, Education, " +
-      "Transportation, Recreation.",
+      "Search a Socrata portal's dataset catalog by keyword and/or category. " +
+      "Returns dataset names, IDs, descriptions, and categories. " +
+      "Use list_domains first to find portals, then search within a specific portal.",
     inputSchema: {
+      domain: domainSchema,
       query: z.string().optional().describe("Keyword search term (e.g., 'fire', 'business', 'salary')"),
-      category: z.string().optional().describe("Category filter — case-sensitive (e.g., 'Business', 'Public Safety')"),
+      category: z.string().optional().describe("Category filter — case-sensitive, from get_domain_categories (e.g., 'Business', 'Public Safety')"),
     },
   },
-  async ({ query, category }) => {
+  async ({ domain, query, category }) => {
     if (!query && !category) {
       return {
         content: [
@@ -48,7 +94,7 @@ server.registerTool(
         isError: true,
       };
     }
-    return handleSearchDatasets(client, { query, category });
+    return handleSearchDatasets(client, { domain, query, category });
   }
 );
 
@@ -57,35 +103,31 @@ server.registerTool(
   {
     title: "Get Dataset Schema",
     description:
-      "Get column definitions and sample rows for an Oregon open dataset. " +
+      "Get column definitions and sample rows for a dataset on a Socrata portal. " +
       "Use this after search_datasets to understand a dataset's structure before querying. " +
       "Returns column names, types, and 3 sample rows.",
     inputSchema: {
-      datasetId: z
-        .string()
-        .regex(/^[a-z0-9]{4}-[a-z0-9]{4}$/, "Must be a 4x4 dataset ID (e.g., tckn-sxa6)")
-        .describe("Dataset identifier from search results (e.g., 'tckn-sxa6')"),
+      domain: domainSchema,
+      datasetId: datasetIdSchema,
     },
   },
-  async ({ datasetId }) => {
-    return handleGetDatasetSchema(client, { datasetId });
+  async ({ domain, datasetId }) => {
+    return handleGetDatasetSchema(client, { domain, datasetId });
   }
 );
 
 server.registerTool(
   "query_dataset",
   {
-    title: "Query Oregon Dataset",
+    title: "Query Dataset",
     description:
-      "Execute a SoQL query against an Oregon open dataset. " +
+      "Execute a SoQL query against a dataset on a Socrata portal. " +
       "Use get_dataset_schema first to understand available columns. " +
       "Supports filtering ($where), aggregation ($group), sorting ($order), " +
       "full-text search ($q), and pagination ($limit/$offset).",
     inputSchema: {
-      datasetId: z
-        .string()
-        .regex(/^[a-z0-9]{4}-[a-z0-9]{4}$/, "Must be a 4x4 dataset ID")
-        .describe("Dataset identifier (e.g., 'tckn-sxa6')"),
+      domain: domainSchema,
+      datasetId: datasetIdSchema,
       select: z.string().optional().describe("Columns/expressions to return (e.g., 'city, count(*)')"),
       where: z.string().optional().describe("Filter expression (e.g., \"city='PORTLAND'\")"),
       group: z.string().optional().describe("Group by columns for aggregation"),
@@ -96,8 +138,9 @@ server.registerTool(
       search: z.string().optional().describe("Full-text search across all text columns"),
     },
   },
-  async ({ datasetId, select, where, group, having, order, limit, offset, search }) => {
+  async ({ domain, datasetId, select, where, group, having, order, limit, offset, search }) => {
     return handleQueryDataset(client, {
+      domain,
       datasetId,
       select,
       where,
@@ -110,6 +153,8 @@ server.registerTool(
     });
   }
 );
+
+// ── SoQL validation (from LSP session) ──
 
 server.registerTool(
   "validate_soql",

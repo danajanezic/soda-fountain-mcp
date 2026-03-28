@@ -81,6 +81,7 @@ function getErrorDiagnostics(
 export async function handleQueryDataset(
   client: SocrataClient,
   params: {
+    domain: string;
     datasetId: string;
     select?: string;
     where?: string;
@@ -104,7 +105,7 @@ export async function handleQueryDataset(
       search: params.search,
     };
 
-    const response = await client.queryDataset(params.datasetId, soqlParams);
+    const response = await client.queryDataset(params.domain, params.datasetId, soqlParams);
 
     const warnings = getWarnings(params);
     const responseWithDiagnostics =
@@ -140,7 +141,7 @@ export async function handleQueryDataset(
           text: JSON.stringify({
             error: true,
             code: "NETWORK_ERROR",
-            message: `Could not reach data.oregon.gov — ${String(err)}`,
+            message: `Could not reach ${params.domain} — ${String(err)}`,
             recoverable: true,
             suggestion: "Check your network connection",
           }, null, 2),
