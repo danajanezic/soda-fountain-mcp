@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { CorrelationKeyIndex } from "../../src/lib/correlation-keys.js";
+import { CorrelationKeySeedSchema } from "../../src/lib/types.js";
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe("CorrelationKeyIndex", () => {
   const index = new CorrelationKeyIndex();
@@ -112,5 +118,58 @@ describe("CorrelationKeyIndex", () => {
         name: "Oregon Open Data",
       });
     });
+  });
+});
+
+describe("correlation-keys.json seed file", () => {
+  const raw = readFileSync(
+    resolve(__dirname, "../../src/data/correlation-keys.json"),
+    "utf8"
+  );
+  const seed = JSON.parse(raw);
+
+  it("passes Zod schema validation", () => {
+    expect(() => CorrelationKeySeedSchema.parse(seed)).not.toThrow();
+  });
+
+  it("has version 1.0", () => {
+    expect(seed.version).toBe("1.0");
+  });
+
+  it("has 6 domains", () => {
+    expect(Object.keys(seed.domains)).toHaveLength(6);
+  });
+
+  it("has 14 keys", () => {
+    expect(seed.keys).toHaveLength(14);
+  });
+
+  it("all dataset IDs are valid 4x4 format", () => {
+    const idRegex = /^[a-z0-9]{4}-[a-z0-9]{4}$/;
+    for (const key of seed.keys) {
+      for (const ds of key.datasets) {
+        expect(ds.id).toMatch(idRegex);
+      }
+    }
+  });
+
+  it("all dataset domains reference a known domain", () => {
+    const knownDomains = new Set(Object.keys(seed.domains));
+    for (const key of seed.keys) {
+      for (const ds of key.datasets) {
+        expect(knownDomains.has(ds.domain)).toBe(true);
+      }
+    }
+  });
+
+  it("has no duplicate dataset entries within a key", () => {
+    for (const key of seed.keys) {
+      const seen = new Set<string>();
+      for (const ds of key.datasets) {
+        const uniqueId = `${ds.domain}/${ds.id}/${ds.column}`;
+        expect(seen.has(uniqueId)).toBe(false);
+        seen.add(uniqueId);
+      }
+    }
   });
 });
