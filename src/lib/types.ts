@@ -75,3 +75,31 @@ export interface SoqlParams {
   offset: number;
   search?: string;
 }
+
+// --- SoQL Validation Types ---
+
+export interface Diagnostic {
+  source: "local" | "api";
+  severity: "error" | "warning";
+  code: string;
+  clause: string;
+  near?: string;
+  message: string;
+  suggestion?: string;
+}
+
+export interface SoQLParams {
+  select?: string;
+  where?: string;
+  order?: string;
+  group?: string;
+  having?: string;
+  limit?: string;
+  offset?: string;
+  q?: string;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  diagnostics: Diagnostic[];
+}
