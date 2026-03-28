@@ -578,6 +578,18 @@ export class SocrataClient {
         `Results hit the limit (${params.limit}). There may be more data — add filters to narrow results, or increase the limit and use $offset to paginate.`;
     }
 
+    // ── Relevance prompt ──
+    // Always include a clear dataset identity statement so the agent can
+    // verify it queried the right dataset. This is the primary defense
+    // against wrong-dataset errors — the agent reads the description and
+    // self-corrects if it doesn't match the user's question.
+    if (datasetDescription && results.length > 0) {
+      queryResponse.notice =
+        (queryResponse.notice ? queryResponse.notice + " " : "") +
+        `ABOUT THIS DATASET: "${datasetDescription.slice(0, 150)}". ` +
+        `Verify this matches what you were looking for. If not, use search_datasets to find the correct dataset.`;
+    }
+
     return queryResponse;
   }
 
