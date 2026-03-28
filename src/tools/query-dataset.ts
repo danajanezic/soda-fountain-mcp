@@ -91,6 +91,7 @@ export async function handleQueryDataset(
     limit: number;
     offset: number;
     search?: string;
+    format?: "json" | "csv" | "geojson" | "markdown";
   }
 ): Promise<ToolResult> {
   try {
@@ -105,7 +106,15 @@ export async function handleQueryDataset(
       search: params.search,
     };
 
-    const response = await client.queryDataset(params.domain, params.datasetId, soqlParams);
+    const format = params.format ?? "json";
+    const response = await client.queryDataset(params.domain, params.datasetId, soqlParams, format);
+
+    // For csv, geojson, and markdown — response is a string
+    if (typeof response === "string") {
+      return {
+        content: [{ type: "text", text: response }],
+      };
+    }
 
     const warnings = getWarnings(params);
     const responseWithDiagnostics =

@@ -32,7 +32,7 @@ describe("query_dataset handler", () => {
       select: "city",
       limit: 100,
       offset: 0,
-    });
+    }, "json");
   });
 
   it("passes through notice on empty results", async () => {

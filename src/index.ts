@@ -127,7 +127,9 @@ server.registerTool(
       "Execute a SoQL query against a dataset on a Socrata portal. " +
       "Use get_dataset_schema first to understand available columns. " +
       "Supports filtering ($where), aggregation ($group), sorting ($order), " +
-      "full-text search ($q), and pagination ($limit/$offset).",
+      "full-text search ($q), and pagination ($limit/$offset). " +
+      "Output formats: json (default, structured), csv (compact tabular), " +
+      "geojson (for geographic data with point/polygon columns), markdown (readable table).",
     inputSchema: {
       domain: domainSchema,
       datasetId: datasetIdSchema,
@@ -139,9 +141,10 @@ server.registerTool(
       limit: z.number().int().min(1).max(1000).default(100).describe("Max rows to return (default 100, max 1000)"),
       offset: z.number().int().min(0).default(0).describe("Pagination offset"),
       search: z.string().optional().describe("Full-text search across all text columns"),
+      format: z.enum(["json", "csv", "geojson", "markdown"]).default("json").describe("Output format: json (structured), csv (tabular), geojson (geographic), markdown (readable table)"),
     },
   },
-  async ({ domain, datasetId, select, where, group, having, order, limit, offset, search }) => {
+  async ({ domain, datasetId, select, where, group, having, order, limit, offset, search, format }) => {
     return handleQueryDataset(client, {
       domain,
       datasetId,
@@ -153,6 +156,7 @@ server.registerTool(
       limit,
       offset,
       search,
+      format,
     });
   }
 );

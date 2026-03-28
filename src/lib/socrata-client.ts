@@ -231,11 +231,7 @@ export class SocrataClient {
     };
   }
 
-  async queryDataset(
-    domain: string,
-    datasetId: string,
-    params: SoqlParams
-  ): Promise<QueryResponse> {
+  private buildQueryString(params: SoqlParams): string {
     const queryParts: string[] = [];
 
     if (params.select) queryParts.push(`$select=${encodeURIComponent(params.select)}`);
@@ -247,9 +243,32 @@ export class SocrataClient {
     queryParts.push(`$limit=${params.limit}`);
     if (params.offset > 0) queryParts.push(`$offset=${params.offset}`);
 
-    const queryString = queryParts.join("&");
-    const urlStr = `https://${domain}/resource/${datasetId}.json?${queryString}`;
+    return queryParts.join("&");
+  }
 
+  async queryDataset(
+    domain: string,
+    datasetId: string,
+    params: SoqlParams,
+    format: "json" | "csv" | "geojson" | "markdown" = "json"
+  ): Promise<QueryResponse | string> {
+    const queryString = this.buildQueryString(params);
+
+    // For csv and geojson, hit the native Socrata endpoint
+    if (format === "csv" || format === "geojson") {
+      const urlStr = `https://${domain}/resource/${datasetId}.${format}?${queryString}`;
+      const response = await this.fetchWithTimeout(urlStr);
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw this.handleHttpError(response.status, body);
+      }
+
+      return response.text();
+    }
+
+    // For json and markdown, fetch JSON
+    const urlStr = `https://${domain}/resource/${datasetId}.json?${queryString}`;
     const response = await this.fetchWithTimeout(urlStr);
 
     if (!response.ok) {
@@ -258,6 +277,11 @@ export class SocrataClient {
     }
 
     const results: Record<string, unknown>[] = await response.json();
+
+    // For markdown, convert JSON results to a markdown table
+    if (format === "markdown") {
+      return this.toMarkdownTable(results, queryString);
+    }
 
     const queryResponse: QueryResponse = {
       results,
@@ -273,6 +297,44 @@ export class SocrataClient {
     }
 
     return queryResponse;
+  }
+
+  private toMarkdownTable(
+    rows: Record<string, unknown>[],
+    queryString: string
+  ): string {
+    if (rows.length === 0) {
+      return "_No rows matched this query. The data may not contain what you're looking for — inform the user rather than guessing._";
+    }
+
+    // Collect all unique keys across all rows (some rows may have missing fields)
+    const keys = Array.from(
+      new Set(rows.flatMap((r) => Object.keys(r)))
+    ).filter((k) => !k.startsWith(":"));
+
+    // Header
+    const header = `| ${keys.join(" | ")} |`;
+    const separator = `| ${keys.map(() => "---").join(" | ")} |`;
+
+    // Rows — truncate long values
+    const dataRows = rows.map((row) => {
+      const cells = keys.map((k) => {
+        const val = row[k];
+        if (val === null || val === undefined) return "";
+        if (typeof val === "object") return JSON.stringify(val);
+        const str = String(val);
+        return str.length > 60 ? str.slice(0, 57) + "..." : str;
+      });
+      return `| ${cells.join(" | ")} |`;
+    });
+
+    return [
+      header,
+      separator,
+      ...dataRows,
+      "",
+      `_${rows.length} rows — query: \`${queryString}\`_`,
+    ].join("\n");
   }
 
   async getMetadata(domain: string, datasetId: string): Promise<DatasetSchema> {
