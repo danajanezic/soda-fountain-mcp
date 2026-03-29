@@ -15,7 +15,7 @@ const appToken = process.env.SOCRATA_API_KEY;
 const client = new SocrataClient(appToken);
 
 const server = new McpServer({
-  name: "socrata-open-data",
+  name: "soda-fountain-mcp",
   version: "2.0.0",
 });
 
